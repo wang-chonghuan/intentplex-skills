@@ -1,0 +1,3 @@
+display_name: NF ToolTrend
+short_description: Research a product category for the buying lens — what decides it, what to avoid, where it is heading.
+default_prompt: Use ips-tooltrend to research how to choose within a product category.

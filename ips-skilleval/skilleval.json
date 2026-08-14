@@ -1,0 +1,20 @@
+{
+  "name": "ips-skilleval",
+  "description": "Four-lens adjudicated audit of an agent skill.",
+  "depends_on": {
+    "skills": {
+      "required": [
+        "ips-telos"
+      ],
+      "optional": []
+    },
+    "tools": {
+      "required": [
+        "a subagent mechanism able to run four agents in parallel"
+      ],
+      "optional": [
+        "git"
+      ]
+    }
+  }
+}

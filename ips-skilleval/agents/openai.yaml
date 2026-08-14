@@ -1,0 +1,3 @@
+display_name: ips-skilleval
+short_description: Audit an agent skill with four independent lenses — contradictions, gaps, factual errors, drift from its own stated principles — then adjudicate and adversarially verify before reporting.
+default_prompt: Use ips-skilleval to audit a skill — scope everything it ships, collect the usage facts, run the four lenses as parallel subagents, adjudicate and refute their findings, and hand back a decision list rather than a patch.

@@ -1,0 +1,3 @@
+display_name: ips-personas
+short_description: Judge a user-facing artifact through a panel of situated personas run as independent subagents, and report whether it will attract, retain, and grow users.
+default_prompt: Use ips-personas to review this user-facing artifact — draft a spec, trial-run one persona, then run the panel as subagents that actually experience it and report step-by-step, and synthesize whether it meets or exceeds user expectations and will attract, retain, and grow users.

@@ -1,0 +1,3 @@
+display_name: ips-telos
+short_description: Review artifacts by their final cause and report drift, ambiguity, missing design, overdesign, and miscalibrated freedom.
+default_prompt: Use ips-telos to run a Final-Cause Adversarial Review on this artifact, including whether the design is too thin or needlessly complex for its purpose.
