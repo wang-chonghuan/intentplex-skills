@@ -86,6 +86,7 @@ eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"; render whoami --output text --
 | 5 | Database | `references/capability-5-database/database.md` — connect, measure, and check without writing |
 | 6 | Environment | `references/capability-6-environment/environment.md` — see and change configuration safely |
 | 7 | Rollback | `references/capability-7-rollback/rollback.md` — go back to the last good deploy |
+| 8 | Provision | `references/capability-8-provision/provision.md` — create a project's resources headlessly, and the three things the API will not let you do |
 
 Read the capability file at the moment you act. Do not run a command recalled
 from earlier in a session; resource IDs change when a Blueprint is re-synced.
