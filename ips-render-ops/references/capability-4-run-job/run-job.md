@@ -5,7 +5,22 @@ change took effect.
 
 ## Trigger
 
-In the Render Dashboard: the cron job → **Trigger Run**.
+There is an API for this, and it is not the one you would guess from the service
+endpoints — a cron job has a `crn-…` id but lives under `/v1/cron-jobs`, not
+under `/v1/services`:
+
+```bash
+eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"
+curl -s -X POST "https://api.render.com/v1/cron-jobs/<crn-id>/runs" \
+  -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" -d '{}'
+# -> {"id":"crn-…-1787351330","status":"pending","triggeredBy":"…"}
+```
+
+`POST /v1/services/<crn-id>/jobs` looks like it should work and returns
+`400 startCommand is a required field` — that endpoint is for one-off jobs on a
+service, not for firing a cron.
+
+The Dashboard's **Trigger Run** button does the same thing.
 
 **If a run is already active, triggering cancels it and starts a new one.** So
 check the job is idle first (capability 2 — look for its done event) unless

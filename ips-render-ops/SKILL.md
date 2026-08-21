@@ -87,6 +87,7 @@ eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"; render whoami --output text --
 | 6 | Environment | `references/capability-6-environment/environment.md` — see and change configuration safely |
 | 7 | Rollback | `references/capability-7-rollback/rollback.md` — go back to the last good deploy |
 | 8 | Provision | `references/capability-8-provision/provision.md` — create a project's resources headlessly, and the three things the API will not let you do |
+| 9 | Domains | `references/capability-9-domains/domains.md` — point a real domain at a service, and prove Render is the one answering |
 
 Read the capability file at the moment you act. Do not run a command recalled
 from earlier in a session; resource IDs change when a Blueprint is re-synced.
