@@ -12,6 +12,7 @@ render services --output json --confirm | python3 -c "
 import sys, json
 for s in json.load(sys.stdin):
     s = s.get('service', s)
+    if not s.get('type'): continue          # datastores carry no type — see trap 1
     print(f\"{s['name']:<30} {s['type']:<12} autoDeploy={s.get('autoDeploy')}\")
 "
 ```
@@ -36,27 +37,54 @@ is the failure that looks like nothing at all.
 eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"
 SHA=$(git rev-parse HEAD)          # confirm this commit is actually on the tracked branch
 
+# `.get('type')`, never `['type']` — see the listing trap below.
 render services --output json --confirm | python3 -c "
 import sys, json
 for s in json.load(sys.stdin):
     s = s.get('service', s)
-    if s['type'] in ('web_service', 'cron_job'): print(s['id'])
-" | while read -r id; do
+    if s.get('type') in ('web_service', 'cron_job'): print(s['type'], s['id'], s['name'])
+" > /tmp/svc.txt
+
+# Web services take an explicit commit. Cron jobs do not — see below.
+awk '$1=="web_service"{print $2}' /tmp/svc.txt | while read -r id; do
   render deploys create "$id" --commit "$SHA" --wait --output text --confirm || echo "FAIL $id"
+done
+awk '$1=="cron_job"{print $2}' /tmp/svc.txt | while read -r id; do
+  curl -s -o /dev/null -w "%{http_code} $id\n" -X POST \
+    -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+    "https://api.render.com/v1/services/$id/deploys" -d '{}'
 done
 ```
 
-Two flags carry the weight:
+Then **poll until every service reports `live` on the commit you meant** — the
+verify section below is not optional here, because the cron half of this ran
+without `--wait`.
 
-- **`--commit <sha>`** deploys that commit rather than whatever the branch head
-  happens to be when the command reaches Render. Those differ the moment someone
-  else merges while you are deploying, and "the branch head at the time" is not
-  something you can report afterwards.
-- **`--wait`** blocks and exits non-zero on failure. Without it the loop reports
-  success for a deploy that has not finished building.
+### Three traps in that loop, all of which produce a silent partial release
 
-Deploying a **single** service — a rebuild after an env change, or re-running an
-infrastructure failure — is the same command with one id and no loop.
+**1. The services listing contains datastores, and they have no `type`.** A
+Postgres entry deserializes as `{'environment', 'postgres', 'project'}` — no
+`type`, no `name`. Writing `s['type']` raises `KeyError` **mid-iteration**, so
+the loop does not crash loudly at the start; it emits some services, dies, and
+leaves you with a truncated list. Worse, the datastore can sort ahead of the web
+service, in which case the one service you actually care about is the one
+silently missing. Always `.get('type')`.
+
+**2. Render refuses `--commit` for cron jobs.** The API answers
+`400: cannot deploy cron job service <id> by commit reference ID`. Only web
+services can be pinned to a commit; a cron job deploys the tracked branch's
+head. So a "release one commit everywhere" loop **cannot** be uniform — pin the
+web service, and make sure the branch head *is* that commit before firing the
+crons.
+
+**3. `--wait` on a cron job can latch onto the wrong deploy and hang forever.**
+Observed: `render deploys create <cron> --wait` sat printing
+`Waiting for deploy dep-XXXX to complete...` for over ten minutes while the API
+reported that service's newest deploy already `live` — a different id. Do not
+use `--wait` for cron jobs; fire them and poll the API.
+
+A single service — a rebuild after an env change, or re-running an
+infrastructure failure — is one `render deploys create`, no loop.
 
 ## The trap: `autoDeploy: false` does not mean "nothing happens on push"
 
@@ -91,12 +119,29 @@ telling you something you did not know.
 
 ## Verify — this is the part that counts
 
+One service:
+
 ```bash
 render deploys list <serviceID> --output json --confirm | python3 -c "
 import sys, json
 d = json.load(sys.stdin)[0]['deploy']
 print(d['status'], d['commit']['id'][:7] if d.get('commit') else '-', d['finishedAt'])
 "
+```
+
+Every service at once, which is what a release needs — repeat until the count
+reaches the number of services, because the cron deploys were fired without
+`--wait`:
+
+```bash
+SHA=$(git rev-parse --short HEAD)
+awk '{print $2, $3}' /tmp/svc.txt | while read -r id name; do
+  curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+    "https://api.render.com/v1/services/$id/deploys?limit=1" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)[0]; d = d.get('deploy', d)
+print(f\"$name {d['status']} {(d.get('commit') or {}).get('id','-')[:7]}\")"
+done
 ```
 
 Then confirm the commit that is live is the commit you meant, and hit the site:
