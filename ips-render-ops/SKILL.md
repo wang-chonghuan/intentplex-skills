@@ -81,7 +81,7 @@ eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"; render whoami --output text --
 |---|---|---|
 | 1 | Status | `references/capability-1-status/status.md` — one picture of every service, its health, and its last deploy |
 | 2 | Logs | `references/capability-2-logs/logs.md` — read what a service or a job actually printed |
-| 3 | Deploy | `references/capability-3-deploy/deploy.md` — put one commit into production and prove it took. **Start here whenever you are about to deploy**: it decides auto vs manual by reading the platform, and a manual release is every service, not the one you had in mind |
+| 3 | Deploy | `references/capability-3-deploy/deploy.md` — put one commit into production and prove it took. **Start here whenever you are about to deploy.** A release is `scripts/release.py`: it asks the platform what exists, deploys all of it, and exits non-zero unless every service is live on the target commit |
 | 4 | Run a job now | `references/capability-4-run-job/run-job.md` — fire a cron job off-schedule and watch it |
 | 5 | Database | `references/capability-5-database/database.md` — connect, measure, and check without writing |
 | 6 | Environment | `references/capability-6-environment/environment.md` — see and change configuration safely |

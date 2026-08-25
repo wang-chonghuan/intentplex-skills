@@ -28,63 +28,74 @@ not the first row.
 
 ## The manual release
 
-A release is **one commit across every service**, not a deploy of the one you
-were thinking about. Cron jobs each run their own image; deploying only the web
-service leaves them on old code — and they keep exiting 0 while doing it, which
-is the failure that looks like nothing at all.
+One command. It asks the platform what exists, deploys every one of them, polls
+until they agree, and **exits non-zero unless every service is live on the
+target commit**:
 
 ```bash
 eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"
-SHA=$(git rev-parse HEAD)          # confirm this commit is actually on the tracked branch
-
-# `.get('type')`, never `['type']` — see the listing trap below.
-render services --output json --confirm | python3 -c "
-import sys, json
-for s in json.load(sys.stdin):
-    s = s.get('service', s)
-    if s.get('type') in ('web_service', 'cron_job'): print(s['type'], s['id'], s['name'])
-" > /tmp/svc.txt
-
-# Web services take an explicit commit. Cron jobs do not — see below.
-awk '$1=="web_service"{print $2}' /tmp/svc.txt | while read -r id; do
-  render deploys create "$id" --commit "$SHA" --wait --output text --confirm || echo "FAIL $id"
-done
-awk '$1=="cron_job"{print $2}' /tmp/svc.txt | while read -r id; do
-  curl -s -o /dev/null -w "%{http_code} $id\n" -X POST \
-    -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
-    "https://api.render.com/v1/services/$id/deploys" -d '{}'
-done
+python3 <skill>/scripts/release.py                  # release git HEAD
+python3 <skill>/scripts/release.py --dry-run        # show the targets, touch nothing
+python3 <skill>/scripts/release.py --commit <sha>
+python3 <skill>/scripts/release.py --only <substr>  # one service, or a subset
 ```
 
-Then **poll until every service reports `live` on the commit you meant** — the
-verify section below is not optional here, because the cron half of this ran
-without `--wait`.
+**Start with `--dry-run`.** It prints exactly which services a real run would
+touch, and it is the cheapest way to notice that the workspace is not the one
+you thought.
 
-### Three traps in that loop, all of which produce a silent partial release
+### Why a script and not a command to retype
 
-**1. The services listing contains datastores, and they have no `type`.** A
-Postgres entry deserializes as `{'environment', 'postgres', 'project'}` — no
-`type`, no `name`. Writing `s['type']` raises `KeyError` **mid-iteration**, so
-the loop does not crash loudly at the start; it emits some services, dies, and
-leaves you with a truncated list. Worse, the datastore can sort ahead of the web
-service, in which case the one service you actually care about is the one
-silently missing. Always `.get('type')`.
+Because the release is the one operation where the failure is silent. Ten
+services update, one does not, and every observable signal says success. Nobody
+verifies eleven services by hand every time; an exit code does it every time.
 
-**2. Render refuses `--commit` for cron jobs.** The API answers
-`400: cannot deploy cron job service <id> by commit reference ID`. Only web
-services can be pinned to a commit; a cron job deploys the tracked branch's
-head. So a "release one commit everywhere" loop **cannot** be uniform — pin the
-web service, and make sure the branch head *is* that commit before firing the
-crons.
+An earlier version of this file asked you to retype a loop. The first person to
+follow it — the author — got it wrong in three separate ways on the first real
+release. That is the argument.
 
-**3. `--wait` on a cron job can latch onto the wrong deploy and hang forever.**
-Observed: `render deploys create <cron> --wait` sat printing
-`Waiting for deploy dep-XXXX to complete...` for over ten minutes while the API
-reported that service's newest deploy already `live` — a different id. Do not
-use `--wait` for cron jobs; fire them and poll the API.
+### What it refuses to do
 
-A single service — a rebuild after an env change, or re-running an
-infrastructure failure — is one `render deploys create`, no loop.
+Each of these exits non-zero rather than proceeding:
+
+- **The target commit is not the tracked branch head.** Services that cannot be
+  pinned to a commit deploy their branch head, so pinning some services while
+  others take a different head is not one release. Push first, or pick the
+  commit that is actually the head.
+- **No deployable services matched.** A release that targets nothing must not
+  report success — that is how a wrong workspace or a typo'd `--only` looks.
+- **`RENDER_API_KEY` is unset.**
+
+### The Render behaviour it encodes, so you do not have to
+
+All three were observed on a real release, and all three produce a *silent
+partial release* when you get them wrong:
+
+**1. Datastores appear in the services listing and have no `type` field.** A
+Postgres entry deserializes as `{'environment', 'postgres', 'project'}`. Writing
+`s['type']` raises `KeyError` **mid-iteration** — the loop does not fail loudly,
+it emits some services, dies, and leaves a truncated list. The datastore can
+sort ahead of the web service, so the one service you actually care about is the
+one silently missing. The script treats *having a `type`* as the definition of
+deployable, which is also why adding a background worker or a static site needs
+no change here.
+
+**2. Cron jobs reject a commit reference.** `POST /deploys` with `commitId`
+answers `400 … cannot deploy cron job service … by commit reference ID`. The
+script tries with the commit and retries without on exactly that rejection,
+rather than carrying a list of which types can be pinned.
+
+**3. `--wait` on a cron job can latch onto the wrong deploy and hang.** Observed:
+`render deploys create <cron> --wait` printed `Waiting for deploy dep-XXXX…` for
+over ten minutes while the API reported that service's newest deploy already
+`live` — a different id. The script polls the API instead.
+
+### Deploying by hand
+
+If you need to do it without the script — one service, or the script is
+unavailable — it is `render deploys create <serviceID> --commit <sha> --wait`
+for a web service, and a plain `POST /v1/services/<id>/deploys` with `{}` for a
+cron job. Then verify, below.
 
 ## The trap: `autoDeploy: false` does not mean "nothing happens on push"
 
