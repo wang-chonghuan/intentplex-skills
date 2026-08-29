@@ -19,8 +19,9 @@ tell you, because the thing you want is not a property of any single row — it 
 a judgement about the whole output, and it is partly aesthetic.
 
 This skill is for the second kind. Its method is not "make it correct"; it is
-**make each version better than the last, cheaply enough that you can afford many
-versions, and honestly enough that you can tell which way you moved.**
+**make each version better than the last, keep each version cheap enough that
+you can afford to run many, and measure honestly enough that you can tell whether
+the latest one is actually better or just different.**
 
 The mistake that costs the most is treating an optimization problem as a
 deterministic one: writing the job, running it once, checking it does not crash,
@@ -30,8 +31,9 @@ you so.
 ## Two loops, nested
 
 The inner loop is about **correctness**: does the run produce structurally sound
-data? It is cheap, mechanical, and must close before the outer loop means
-anything — you cannot judge the quality of output you cannot trust.
+data? It is cheap and mechanical, and it has to be working before the outer loop is
+worth anything: if you cannot trust that the rows are sound, you have no way to
+tell whether the output is good.
 
 The outer loop is about **method**: is this the right way to do the job? It is
 expensive, slow, and driven by judgement. It is where the value is.
@@ -41,20 +43,22 @@ on a null pointer taught you nothing about your method.
 
 ---
 
-# The inner loop — earning the right to judge
+# The inner loop — making the data trustworthy enough to judge
 
 ## Declare invariants before writing code
 
 List what must be true of the output when the job finishes. Three to five
 statements, true or false about rows, not "it should look reasonable".
 
-Write them **first**. An assertion written afterwards tends to encode what the
-program already believes, so it passes and teaches nothing. Written before the
-code exists, it cannot inherit the code's assumptions — that independence is the
-entire value.
+Write them **first**. If you write the check after the code, you will
+unconsciously write a check the code already passes — you look at what the program
+does and describe that, so it goes green and tells you nothing. Write it before
+the code exists and it cannot copy the code's assumptions, because there are no
+assumptions to copy yet. That is the whole reason the order matters.
 
-The test of a real check: **can it fail?** If you cannot describe the rows that
-would trip it, it is documentation.
+To tell whether a check is real, ask: **could this ever fail?** If you cannot
+describe the specific bad rows that would make it fail, it is not testing
+anything — it is a comment that happens to be written in SQL.
 
 ## Ask the store, never the program
 
@@ -75,12 +79,15 @@ Give the failing assertion the power to say **do not publish this version**.
 
 ## Two habits that keep runs alive
 
-- **Late optional stages degrade, never kill.** Anything after the main write —
-  cleanup, extra enrichment, tidying — goes in a `try/catch` that logs and
-  continues. A cosmetic step must not destroy a completed run's output.
-- **Count downstream of the failure.** A counter placed before the step that can
-  fail reports work that never landed. Log the shape of the result — attempted,
-  succeeded, declined, failed — so an all-zero outcome announces itself.
+- **A nice-to-have step at the end must not be able to kill the run.** Anything
+  that happens after the main write — cleanup, extra enrichment, tidying up — goes
+  in a `try/catch` that logs the error and carries on. Otherwise a tidying step
+  that throws will destroy two hours of finished work that was already computed.
+- **Put your counters after the step that can fail, not before it.** If you count
+  work as you hand it off, you are counting attempts, not results — the log will
+  say "39 assigned" while the database has zero. Log every outcome separately:
+  attempted, succeeded, declined, failed. Then a run that produced nothing says so
+  out loud instead of looking healthy.
 
 ## Fix the code, not the rows
 
@@ -88,9 +95,9 @@ A one-off repair script fixes today. The code runs every time.
 
 Repair scripts are legitimate — sometimes the only way to avoid re-running an
 expensive job — but never alone and never first. **Fix the source, then repair
-the existing rows in the same round.** If there is appetite for only one, do the
-source: bad rows you know about are a smaller problem than a generator you know
-is broken.
+the existing rows in the same round.** If you only have time for one of the two, fix the
+source: rows you know are wrong are a smaller problem than a program you know
+will produce wrong rows again.
 
 ---
 
@@ -106,16 +113,20 @@ Three parts:
 
 - A **version column** on every derived table, and a **run table** holding each
   run's parameters, statistics, and status.
-- Exactly one version marked **active** — what the product reads. Publishing is a
-  separate, deliberate act from producing.
-- Parameters recorded **with** the output, not in someone's shell history. A
-  version whose settings are unknown cannot be reasoned about.
+- Exactly one version marked **active** — the one the product actually reads.
+  Producing a version and putting it live are two separate decisions, and the
+  second one should take a deliberate action.
+- The settings recorded **next to** the output, not left in someone's shell
+  history. If you cannot see what settings produced a version, you cannot say why
+  it differs from the last one, and comparing them is guesswork.
 
 ## Separate the expensive-and-stable from the cheap-and-volatile
 
-The highest-leverage architectural decision in this kind of work: find the part
-that is expensive but rarely needs to change, and give it **its own table and its
-own lifecycle**, so the part you are actually iterating can be re-run cheaply.
+This is the design decision that pays off most in this kind of work. Find the
+step that costs a lot but rarely needs changing, and give it **its own table and
+its own version**, separate from everything downstream. Then the part you are
+actually still changing can be re-run on its own, without paying for the expensive
+step again.
 
 Typical split: extraction and embedding are expensive and stable; grouping,
 scoring and labelling are cheap and volatile. Done right, iterating the volatile
@@ -129,10 +140,11 @@ Get this wrong and every idea costs a full re-run, so you stop having ideas.
 **A trial run answers: does the machinery work?** A small slice, run for real,
 through every write path including the last one. Cheap enough to do many times.
 
-**A full run answers: is the output any good?** Quality is a property of scale.
-Structures that need density do not appear in a slice — a grouping step gated on
-"at least N members" simply never fires on small input, so the trial run tells
-you nothing about the thing you most want to see.
+**A full run answers: is the output any good?** You can only see that at full
+size. Some parts of the output only exist when there is enough data to form them —
+a step that only groups things when it has at least N of them will simply never
+run on a small slice. So the trial run can pass while telling you nothing at all
+about the part you most wanted to look at.
 
 Never confuse a shrunken *parameter* for a small run. Reducing cluster count,
 sampling rate, or concurrency changes how the same full workload is divided; the
@@ -148,48 +160,58 @@ that would otherwise never trigger — as a flag, not an edit.
 The log tells you the job ran. It cannot tell you the output is good. Every
 version, look at actual rows:
 
-- **The extremes.** The biggest groups, the smallest, the emptiest, the outliers.
-  Defects concentrate at the ends.
+- **The extremes.** The biggest groups, the smallest, the empty ones, the odd
+  ones. Whatever is broken usually shows up at the top or the bottom of a sorted
+  list, not in the middle.
 - **A random sample**, not a curated one.
 - **The new thing.** Whatever this version changed — look at exactly that,
   directly.
 
-This step is not automatable and is where nearly every real improvement starts.
+No script can do this part for you, and it is where nearly every real improvement
+starts.
 
 ## Show samples to the human early
 
 The best moment in the loop is putting a concrete sample in front of the person
 whose judgement defines "good" — before spending on a full run.
 
-They will tell you things no metric would: that a structure you thought marginal
-is commercially valuable and should be kept even when it looks trivial; that a
-defect you ranked first is not a defect at all. Both of those reversals are worth
-more than a week of tuning, and both arrive within minutes of showing real
-output.
+They will tell you things no number could: that something you were about to drop
+as unimportant is actually worth a lot to the business and should be kept even
+when it looks trivial; that the problem you ranked as most serious is not a
+problem at all. Either of those reversals saves more than a week of tuning, and
+both usually arrive within minutes of showing them real output.
 
-So: trial run → show samples → decide → full run. Not: full run → hope.
+So the order is: trial run, show samples, decide, then full run. Not: full run,
+and hope it turned out well.
 
 ## Change one thing per version
 
-Two changes in one version means you cannot attribute the difference. When two
-changes are entangled, decide which one you are testing and hold the other fixed,
-even if it means one more run.
+If a version contains two changes and the result is better, you do not know which
+change did it — or whether one helped and the other hurt. When two changes seem to
+depend on each other, pick the one you are actually testing and leave the other
+alone, even if that costs an extra run.
 
-Log what changed, in words, in the run's parameters or the ticket. Six versions
-later nobody remembers why v5 existed.
+Write down what changed, in plain words, in the run's settings or the ticket. Six
+versions later nobody will remember why v5 existed, including you.
 
-## Compare versions on measures that survive the change
+## Check that your quality measures still mean what they used to
 
 Pick a few numbers that stand for quality — coverage, size distribution,
 self-reported purity, human-rated samples — and record them for every version.
 
-Then guard against the trap: **a proxy is only valid relative to a structure.**
-Change the structure and the proxy may quietly start measuring something else. A
-metric that meant "duplicate categories" can become meaningless once categories
-are grouped by similarity, because then the thing it detects is expected rather
-than wrong. When the method changes, re-derive whether the measure still measures
-what its name says. Otherwise you will report "no improvement" about a number
-that stopped being about improvement.
+Here is the trap. **A stand-in number only means what you think it means as long
+as the structure stays the same.** Change the method and the same number can
+quietly start measuring something entirely different, while keeping its old name.
+
+A real case: a count of "items that also belong to a neighbouring category" was a
+good way to spot categories that had been wrongly split in two. Then the method
+changed so that similar categories were deliberately grouped together — and from
+that point on, an item belonging to a neighbour was *expected*, not a sign of
+anything wrong. The number barely moved, and reporting it as "no improvement"
+would have been meaningless, because it had stopped being about improvement.
+
+So whenever the method changes, work out again whether each measure still measures
+what its name claims, before you read anything into its value.
 
 ## Do not optimize a threshold you invented
 
@@ -198,11 +220,14 @@ minimum count. When a report says "N items exceeded the threshold", the honest
 first question is not how to fix them — it is **whether the threshold was ever
 right**.
 
-Measure the flagged population against an independent signal. The finding is
-often that the rule was wrong and enforcing it was doing damage: splitting things
-that belonged together, discarding things that were fine. Worse, an invented rule
-tends to be load-bearing — other defects turn out to be its downstream
-consequences, and removing it fixes them for free.
+Take the items the rule flagged and measure them against something the rule had
+no part in deciding. Often what you find is that the rule itself was wrong, and
+enforcing it was doing damage — breaking apart things that belonged together, or
+throwing away things that were fine.
+
+And it is usually worse than that: a made-up rule tends to have other things
+resting on it. Bugs you were treating as separate turn out to be consequences of
+that rule, so deleting it fixes them too, at no cost.
 
 A threshold you set is not evidence about the world — it is a number someone
 picked, and it has probably never been checked.
@@ -214,36 +239,44 @@ more runs only refine the work under a rule that may be wrong, while measuring c
 show the rule itself is the defect. Challenges from whoever knows the domain
 deserve this treatment first.
 
-## Separate "the structure is wrong" from "the structure is coarse"
+## "This group is a mess" and "this level is too crowded" are different problems
 
-A common confusion that produces bad method changes: conflating *this grouping is
-internally mixed* (a quality defect — split it) with *this level is too wide to
-browse* (a navigation problem — group it). They feel similar and have opposite
-remedies. Fixing the second with the first's tool damages real data by inventing
-boundaries that do not exist.
+These two feel alike and get confused constantly, and the fixes are opposite:
 
-When a fix requires reassigning items, ask whether the problem was ever about the
-items. Adding a layer of organisation over unchanged data is almost always safer
-than re-cutting the data.
+- **This group has unrelated things in it.** That is a quality problem. The fix is
+  to split the group.
+- **This level has too many groups to browse.** That is a navigation problem. The
+  fix is to add a layer above them, leaving every group intact.
+
+Using the first fix on the second problem is how you end up carving real
+categories in half along boundaries you invented, because they were never
+genuinely two things.
+
+So when a fix involves moving items around, stop and ask whether the problem was
+ever about the items at all. Putting a layer of organisation on top of unchanged
+data is almost always safer than re-cutting the data itself.
 
 ## Know when to stop
 
-Optimization has no natural end; the loop will keep offering improvements
-forever. Stop when the marginal gain stops mattering to the purpose the data
-serves — not when the numbers stop moving.
+This kind of work has no finish line — there will always be one more thing that
+could be better. Stop when the next improvement no longer makes any difference to
+what the data is actually for. Not when the numbers stop moving; they never
+entirely stop.
 
-Signs it is time to stop: the remaining defects are aesthetic; the next
-improvement costs more than the value it adds; the person paying says "good
-enough". Write the remaining ideas down as future work and stop. An unshipped
-perfect version is worth less than a shipped good one.
+You are done when the problems that remain are cosmetic, when the next fix costs
+more than it is worth, or when the person paying for it says it is good enough.
+Write the leftover ideas down as future work and stop. A good version that people
+are using beats a perfect one that is still being polished.
 
 ## Report honestly
 
-- The summary reports what the **assertions** found, not what the code intended.
-- Any bound the job imposed on itself — a cap, a sample, a skipped retry — is
-  logged explicitly. Silent truncation reads as full coverage.
-- When a version is worse, say so and say which measure says it. A loop that only
-  ever reports progress is not measuring.
+- The end-of-run summary reports what the **checks actually found**, not what the
+  code was trying to do.
+- If the job limited itself in any way — took only the top N, sampled, gave up
+  after one retry — say so in the log. If you leave it out, the run looks like it
+  covered everything.
+- When a version comes out worse, say so, and say which measure shows it. If every
+  round you report is an improvement, you are not really measuring.
 
 ---
 
