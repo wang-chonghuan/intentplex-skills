@@ -204,9 +204,15 @@ that belonged together, discarding things that were fine. Worse, an invented rul
 tends to be load-bearing — other defects turn out to be its downstream
 consequences, and removing it fixes them for free.
 
-A threshold you set is not evidence about the world. Treat a challenge to it —
-especially from the person who knows the domain — as a measurement request, not
-an objection to rebut.
+A threshold you set is not evidence about the world — it is a number someone
+picked, and it has probably never been checked.
+
+So when someone challenges one, **go and measure it instead of explaining why it
+is right**. You can almost always construct a defence; that is the problem. One
+measurement of a rule you believe in is worth more than several more runs, because
+more runs only refine the work under a rule that may be wrong, while measuring can
+show the rule itself is the defect. Challenges from whoever knows the domain
+deserve this treatment first.
 
 ## Separate "the structure is wrong" from "the structure is coarse"
 
