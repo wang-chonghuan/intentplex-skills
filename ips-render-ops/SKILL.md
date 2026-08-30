@@ -1,6 +1,12 @@
 ---
 name: ips-render-ops
-description: Load for day-to-day operation of a project already running on Render — "线上什么状态", "看一下日志", "手动跑一次那个 cron", "部署上去了吗", "回滚", "连一下生产库", "改个环境变量", or "ips-render-ops cap1..cap7". It sits on top of Render's own 21 official skills rather than replacing them: those explain how Render works, this one turns the recurring operations into one correct command each, with the non-interactive and credential-loading traps already solved. Do not load to design infrastructure (use render-blueprints), to deploy a project for the first time (render-deploy), or to debug a failed build in depth (render-debug).
+description: >-
+  Load for day-to-day operation of a project already running on Render —
+  "线上什么状态", "看一下日志", "手动跑一次那个 cron", "部署上去了吗", "回滚",
+  "连一下生产库", "改个环境变量", or "ips-render-ops cap1..cap7". It sits on
+  top of Render's official skills rather than replacing them. Do not load to
+  design infrastructure, deploy a project for the first time, or debug a failed
+  build in depth.
 ---
 
 # ips-render-ops

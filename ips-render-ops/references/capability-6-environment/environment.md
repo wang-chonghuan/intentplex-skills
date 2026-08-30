@@ -8,8 +8,10 @@ See and change a service's configuration.
 survives until the next Blueprint sync and then silently reverts. So:
 
 - A setting that should persist → change it in `render.yaml`, push.
-- A secret → declared in `render.yaml` as `sync: false`, typed into the
-  dashboard once by a human. The file never learns the value.
+- A secret → declared in `render.yaml` as `sync: false`. Its value stays out
+  of Git and lives in Render. A human may type it in the dashboard, or may
+  explicitly authorize named keys to be synced from a Git-ignored local env
+  file with the script below.
 - A one-off experiment → dashboard is fine, but write it back or expect to lose it.
 
 ## Look at what a service actually has
@@ -26,9 +28,42 @@ curl -s "https://api.render.com/v1/services/<serviceID>/env-vars?limit=50" \
 
 ## Adding a value
 
-**Never enter a credential on the human's behalf.** Supplier passwords, API
-keys, payment details: state which key is missing and let them type it into the
-dashboard. Non-secret configuration (a batch size, a feature switch) belongs in
+Without explicit authorization, supplier passwords, API keys and other
+credentials remain human-entered values: state which key is missing and let the
+human type it into the dashboard.
+
+With explicit authorization for the target environment group and the exact key
+names, use `scripts/sync_env_group.py`. It reads a Git-ignored env file without
+sourcing it, updates only the named keys, and prints key names but never values.
+It is a dry-run unless `--apply` is present:
+
+```bash
+eval "$(grep '^export RENDER_API_KEY' ~/.zshrc)"
+python3 <ips-render-ops>/scripts/sync_env_group.py \
+  --env-group <env-group-id> \
+  --env-file <main-checkout>/.env \
+  --key FIRST_KEY \
+  --key SECOND_KEY
+
+# After the dry-run names exactly the intended keys:
+python3 <ips-render-ops>/scripts/sync_env_group.py \
+  --env-group <env-group-id> \
+  --env-file <main-checkout>/.env \
+  --key FIRST_KEY \
+  --key SECOND_KEY \
+  --apply
+```
+
+This authorization is narrow:
+
+- The human must name or unambiguously approve the exact keys and target.
+- The env file must be ignored by the Git repository that contains it.
+- Never bulk-import every key from an env file.
+- Never print request bodies, response bodies, values, or value lengths.
+- A retry may repeat only the same named-key operation; adding other keys needs
+  separate authorization.
+
+Non-secret configuration (a batch size, a feature switch) belongs in
 `render.yaml` with a literal `value`.
 
 ## Removing
