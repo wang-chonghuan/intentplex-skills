@@ -1,0 +1,4 @@
+interface:
+  display_name: "IPS Dataist"
+  short_description: "Run and recover data jobs without waste or drift"
+  default_prompt: "Use $ips-dataist to carry this data job from its durable checkpoint through collection, modeling, publication, and concise closure."
