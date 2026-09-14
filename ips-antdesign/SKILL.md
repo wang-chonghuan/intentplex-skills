@@ -1,6 +1,6 @@
 ---
 name: ips-antdesign
-description: Load when the user wants to migrate a whole React app to Ant Design, enforce Ant-first components and design tokens, develop consistently with Ant Design X or Ant Design Charts, upgrade the Ant ecosystem, or explicitly invokes ips-antdesign. Use for full replacement and ongoing Ant UI engineering, not screenshot-faithful restyling, standalone chart images, deployment, or unrelated business logic.
+description: Load when the user wants to migrate a whole React app to Ant Design, use Ant Design Pro or ProComponents without adopting Umi, enforce Ant-first components and design tokens, develop consistently with Ant Design X or Ant Design Charts, upgrade the Ant ecosystem, or explicitly invokes ips-antdesign. Use for full replacement and ongoing Ant UI engineering, not screenshot-faithful restyling, standalone chart images, deployment, or unrelated business logic.
 ---
 
 # ips-antdesign
@@ -17,7 +17,7 @@ Make Ant Design the application's actual UI system, not a skin over a second com
 
 If the user requests only research, a plan, or a review, provide that output without installing or migrating. If asked to implement, continue through verification; do not stop at a plan. Resolve an ambiguous capability from the current request before changing anything.
 
-Always read [shared contract](references/common/contract.md). Before component code, read [sources and tools](references/common/sources.md). Before declaring implementation complete, read [verification](references/common/verification.md). These are conditional references, not a request to load every file every turn.
+Always read [shared contract](references/common/contract.md). Before component code, read [sources and tools](references/common/sources.md). When the user names Ant Design Pro, a Pro preview, or ProComponents, also read [Ant Design Pro usage](references/common/ant-design-pro.md). Before declaring implementation complete, read [verification](references/common/verification.md). These are conditional references, not a request to load every file every turn.
 
 ## Bootstrap
 
@@ -35,6 +35,7 @@ Always read [shared contract](references/common/contract.md). Before component c
 - Prefer official components, then documented composition. Do not recreate Button, Input, Modal, Table or chat primitives behind local wrappers.
 - Consume Ant tokens; maintain only approved overrides and necessary application extensions. Do not rename and transplant the old design system.
 - Keep the user's requested framework and rendering contract. For TanStack Start, preserve Router, server functions and existing SSR/hydration guarantees; adapt frontend setup, not the application backend.
+- Treat Ant Design Pro as a reference application, not a required runtime. Never adopt Umi, Pro's route/request/access scaffolding or its whole app shell when the user chose another framework. ProComponents are optional packages evaluated component by component.
 - Treat core Ant, X and Charts as separate APIs. A CLI miss is not proof that X lacks a component.
 - Lock a compatible stable stack at adoption/upgrade; do not auto-upgrade during normal development.
 - Do not send app data to chart-rendering services, buy data, run paid model calls, deploy, or write production state merely to validate UI.

@@ -22,8 +22,15 @@ Record package versions, selection date, relevant peer decisions and official sk
 | X components / Markdown | https://github.com/ant-design/x/tree/main/packages/x-skill/skills and https://x.ant.design |
 | Charts React APIs | https://ant-design-charts.antgroup.com and https://github.com/ant-design/ant-design-charts |
 | Underlying G2 concepts, only when needed | https://github.com/antvis/chart-visualization-skills |
+| Enterprise page patterns / Pro template | https://preview.pro.ant.design and https://github.com/ant-design/ant-design-pro |
+| Optional higher-level ProComponents | https://github.com/ant-design/pro-components |
 
 Treat links to moving branches as discovery, then resolve matching release/tag/commit or installed types for implementation. Record the ref consulted. CLI historical snapshots can fall back by minor; a version flag is not proof of patch-exact data.
+
+When a Pro preview or ProComponents is in scope, read [Ant Design Pro usage](ant-design-pro.md).
+Pro is a reference application built around Umi; it is not authority to replace the target
+framework. A user-supplied local clone may be inspected read-only, but its machine-specific path
+must not enter the skill or target repo.
 
 Follow any repo-required documentation service, including Context7, first where mandated; then use CLI queries for concrete Ant APIs. If a service fails, report it and use a verified official alternative. Never silently fall back to remembered props.
 
@@ -57,5 +64,6 @@ For CI, place the required guard/adapter in the repo under its normal tool owner
 - `antd mcp` is an optional interface to the same knowledge. Do not install duplicate MCP servers or assume MCP exposes project lint/doctor. Choose one primary query path.
 - Do not blindly install a whole vendor skill bundle. Its global install, auto-upgrade, SDK replacement and styling examples can conflict with the project contract.
 - AntV `chart-visualization` and `mcp-server-chart` can send data to remote services and return chart images. They are not the development path for the app's React charts.
+- Ant Design Pro examples can contain Umi runtime code, local components and demo services alongside official packages. Classify imports before reuse; never copy the whole page or scaffold into a non-Umi app.
 - Library lint can report no issues in a project with no Ant imports. The helper validates the lint report, not adoption coverage.
 - `doctor`, `usage` and `env` are diagnostic outputs. A zero process exit code is not a quality verdict; interpret their actual data separately.

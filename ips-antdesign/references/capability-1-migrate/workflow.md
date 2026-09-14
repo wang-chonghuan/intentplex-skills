@@ -12,7 +12,7 @@ Record the approved scope and evidence in existing ticket artifacts. If old char
 
 ## Establish the Foundation
 
-1. Resolve and pin a compatible stable ecosystem using [sources](../common/sources.md). Retain the framework, routing and protected data/AI layers.
+1. Resolve and pin a compatible stable ecosystem using [sources](../common/sources.md). Retain the framework, routing and protected data/AI layers. If Ant Design Pro is a reference, apply [the Pro boundary](../common/ant-design-pro.md): reuse design patterns selectively, never its Umi scaffold.
 2. Set one Ant token authority and the appropriate Ant/X provider and feedback context. Adapt build and styling setup; do not preserve the old styling framework merely by habit.
 3. Implement/adapt the repo's official-component, token, coverage and old-system guards with failing fixtures. Put them in the ordinary check/CI command.
 4. Select real representative pages from the inventory that exercise the shared foundation and riskiest existing interactions. Include data/chart and AI pages when present, and validate SSR/streaming only where present or required. Cover portals, direct navigation and mobile. Record evidence-backed N/A for absent capabilities; do not invent new ones. A button demo is insufficient.

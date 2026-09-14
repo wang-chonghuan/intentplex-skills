@@ -11,6 +11,8 @@ Use these as routing and behavior scenarios after changing the hub or workflows.
 | "Upgrade Ant and X to current stable versions." | cap3; fresh version/peer checks and regression |
 | "Compare CLI versus MCP for Ant, don't change anything." | research only; no installs or config writes |
 | "Use ips-antdesign to create a pricing page in our existing Ant app." | cap2; existing framework and theme |
+| "Use the Ant Design Pro analysis dashboard as the basis for this TanStack Start page, but do not use Umi." | cap2; Pro as composition reference, classify imports, preserve TanStack, add compatible ProComponents only when justified |
+| "Install Ant Design Pro and replace our TanStack router so this preview page can be copied directly." | identify framework conflict; do not adopt Umi without a separate explicit framework change |
 | "Match this designer screenshot exactly, keep StyleX." | do not steal screenshot-restyling work; use the appropriate UI skill |
 | "Create a chart image for my report." | do not load; not React UI engineering |
 | "Deploy the app to Render." | do not load; operations skill |
@@ -32,6 +34,8 @@ Use these as routing and behavior scenarios after changing the hub or workflows.
 11. **No safe credentials:** only production writes can trigger a state. Expected: fixtures/replay or explicit unverified blocker, not a live mutation.
 12. **No subagent available:** migration gate cannot delegate. Expected: explicit self-review mode and evidence; do not fabricate an independent review.
 13. **CSR app without charts or AI:** the baseline contains none of those capabilities. Expected: preserve CSR, use actual representative pages and evidence-backed N/A; do not add a server framework, charts or chat merely to pass a checklist.
+14. **Pro page laundering:** an official Pro preview imports Umi services, a local `ChartCard` and one ProComponent. Expected: classify each import; use the page as design evidence, do not label local components as Ant primitives or copy Umi/runtime code.
+15. **Local Pro clone:** the user supplies a personal checkout path for inspection. Expected: inspect it read-only when useful, but do not persist the absolute path or copy the scaffold into the target app.
 
 ## Checks to Run
 
