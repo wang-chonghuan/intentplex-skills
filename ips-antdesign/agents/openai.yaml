@@ -1,0 +1,6 @@
+interface:
+  display_name: "ips-antdesign"
+  short_description: "Migrate and develop Ant-first UI with verified guardrails"
+  default_prompt: "Use $ips-antdesign to migrate this app to a compatible stable Ant Design stack while preserving its framework, information, and behavior."
+policy:
+  allow_implicit_invocation: true
