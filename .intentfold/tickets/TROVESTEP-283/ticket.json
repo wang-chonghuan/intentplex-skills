@@ -1,0 +1,12 @@
+{
+  "ticket": "TROVESTEP-283",
+  "mode": "autonomous",
+  "stage": "handed-off",
+  "finish": "review",
+  "worktree": "/Users/yong/.skillhost/user_repos/intentplex-skills--TROVESTEP-283",
+  "branch": "TROVESTEP-283-intentguard-client-boundaries",
+  "base": "1786cf9ad227c2a31df42d9847f829e7ef99dcc7",
+  "skill_baseline": "ad893ac",
+  "ports": {},
+  "tracking_project": "https://app.plane.so/intentmill/projects/967caafe-88e7-4ca0-891f-254aabec8f50/issues/fc521704-2613-49ee-adcb-88fec3ab8123"
+}
