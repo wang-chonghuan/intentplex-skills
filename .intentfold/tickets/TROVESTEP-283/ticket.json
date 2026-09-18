@@ -1,7 +1,7 @@
 {
   "ticket": "TROVESTEP-283",
   "mode": "autonomous",
-  "stage": "handoff-ready",
+  "stage": "handed-off",
   "finish": "review",
   "worktree": "/Users/yong/.skillhost/user_repos/intentplex-skills--TROVESTEP-283",
   "branch": "TROVESTEP-283-intentguard-client-boundaries",
