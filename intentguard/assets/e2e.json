@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "playwright_config": "playwright.config.ts",
+  "projects": ["chromium"],
+  "approval": null,
+  "cases": [
+    {
+      "id": "E2E-001",
+      "title": "A saved item survives a new session",
+      "cuj": "CUJ-BOOKMARKS",
+      "surface": "web",
+      "status": "draft",
+      "source": "Designer-proposed bookmark persistence behavior",
+      "approval": null,
+      "given": [
+        "The approved fixed test user is signed in.",
+        "Item A is available and is not in this user's saved-items list."
+      ],
+      "when": [
+        "The user saves item A.",
+        "The user signs out, signs back in, and opens the saved-items list."
+      ],
+      "then": [
+        {"id": "A1", "expect": "The list contains item A exactly once."}
+      ],
+      "data": {
+        "setup": "Coordinate exclusive use of the shared test account and prepare item A as unsaved. Other saved items may remain.",
+        "cleanup": "Remove this test's saved item A if present, including after partial failure. Leave other account data and the account itself intact."
+      },
+      "limitations": []
+    }
+  ]
+}
