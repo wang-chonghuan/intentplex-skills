@@ -7,18 +7,21 @@ Output: a designer-reviewable catalog, proposed execution matrix, and explicit g
 1. Read the repository's instructions and existing requirements/test inventory.
    Find whether a behavior catalog already exists. Reuse it or agree on migration;
    do not create a second authoritative list.
-2. Derive the exploration scope from actual navigation, route manifests, public
-   entry points, roles, feature states, and the product's documented journeys.
+2. Derive the exploration scope from actual navigation, frontend/backend route
+   manifests, access controls, roles, feature states, and documented journeys.
    Browse as the approved fixed test user and anonymously where available. Include
    meaningful empty, invalid-input, denied-access, success, and persistence states.
    Consider harmful user paths such as deletion, expired sessions, repeated or
-   concurrent submission, and money only where the product offers them. Public
-   API/MCP offerings are user surfaces; internal endpoints are not separate cases.
+   concurrent submission, and money only where the product offers them. Include
+   client-callable API/MCP inputs even when undocumented or prevented by the UI;
+   distinguish them from private calls behind the actual user entry point.
    Code helps locate surfaces and data setup; it does not define correct outcomes.
    Do not perform risky writes during discovery without authorization.
 3. Group observations by CUJ and draft atomic cases using the
    [case contract](../common/case-contract.md). For a new product, draft from its
    approved design and explicitly mark that no runtime exploration occurred.
+   Apply the shared boundary/harm criteria, not a per-field coverage matrix.
+   Propose only the relevant executions/projects; share Then where applicable.
    If an expected result is unknown or observed behavior conflicts with design,
    state the discrepancy and ask the designer instead of copying the bug.
 4. Create `.intentgurad/e2e.json` from

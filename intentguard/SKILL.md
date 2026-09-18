@@ -1,6 +1,6 @@
 ---
 name: intentguard
-description: Load when the user wants a designer-owned Given/When/Then E2E case catalog, wants a ticket's Critical User Journeys reflected in that catalog, asks to implement approved cases in Playwright, or requests full-suite release verification with intentguard. Covers user-facing web, public API, and MCP products; not unit tests, internal API coverage, or generic Playwright API questions.
+description: Load when the user wants a designer-owned Given/When/Then E2E case catalog, wants a ticket's Critical User Journeys reflected in that catalog, asks to implement approved cases in Playwright, or requests full-suite release verification with intentguard. Covers UI behavior and client-callable API/MCP boundaries, including inputs the frontend never sends; not internal-function coverage or generic Playwright API questions.
 ---
 
 # intentguard
@@ -31,10 +31,12 @@ continue through them, subject to their approval boundaries.
 
 ## Authority And Scope
 
-- Test only user-triggerable paths and their observable consequences. No unit
-  tests or internal API test layer. A public API/MCP service sold or exposed to
-  users is a legitimate E2E surface. Existing unrelated checks remain outside
-  this skill; do not introduce them as intentguard release requirements.
+- Test user-triggerable paths and their observable consequences, through both
+  the UI and client-callable API/MCP entry points. A first-party or undocumented
+  endpoint is not exempt because the frontend never sends that input. Select
+  scenarios by product rules and meaningful harm, not field permutations or
+  coverage percentages. No private-function or separate internal API test layer.
+  Existing unrelated checks remain outside this skill's release requirements.
 - AI may discover behaviors, draft cases, and repair test code. It may change or
   retire expected behavior only on the basis of a human-approved requirement.
   A failure, the current implementation, or "make it green" is not that approval.
@@ -44,9 +46,10 @@ continue through them, subject to their approval boundaries.
   functionality. Shared userIds are fine. Prepare each case's premises and
   coordinate shared mutations, normally serially; no dependency on test order
   and no requirement to restore the entire system.
-- Write explicit Then expectations before inspecting the page for implementation.
-  DOM exploration may find controls and actual values, never invent expected
-  values. Include relevant harmful user paths, not just demonstrations.
+- Write explicit Then expectations before inspecting pages/responses for
+  implementation. Exploration may find controls and actual values, never invent
+  expected values. Shared business constraints have one definition; execute only
+  the relevant approved entry points, not every rule through both UI and API.
 - For generated content, test useful observable behavior where practical. Record
   subjective quality as unassessed when no reliable check exists; do not demand
   exact prose, an LLM judge, or a quality rubric merely to adopt this skill.

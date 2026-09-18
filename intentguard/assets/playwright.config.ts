@@ -28,5 +28,13 @@ export default defineConfig({
     baseURL: process.env.INTENTGUARD_BASE_URL,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  // Derive these static routes and test tags from the approved catalog.
+  projects: [
+    {
+      name: 'chromium',
+      grep: /@intentguard:chromium(?:\s|$)/,
+      use: { browserName: 'chromium' },
+    },
+    { name: 'api', grep: /@intentguard:api(?:\s|$)/ },
+  ],
 });

@@ -14,9 +14,10 @@ Output: READY or BLOCKED with complete case-level evidence. Never a deployment.
 2. Confirm that tests were reconciled with current cases and passed gate3. This is
    not a demand to rereview unchanged tests on every release. Newly changed tests
    without reconciliation need cap3 before they can count as release evidence.
-3. Start a fresh full run using the shared command pattern: no filters, shards,
-   focused tests, retries, or synthetic success. Run every active case in every
-   required project. Record the actual process exit and native JSON report.
+3. Start a fresh full run using the shared command pattern: no ad hoc CLI filters,
+   shards, focused tests, retries, or synthetic success. Retain approved static
+   project routing and run every active execution in its assigned projects.
+   Record the actual process exit and native JSON report.
 4. Run `check.py report` with the invocation's start cutoff and exit code.
    Inspect failures by case and Then ID, including fixture/cleanup/global errors.
    Report missing, skipped, flaky, and blocked separately from actual failures.
@@ -32,10 +33,12 @@ Output: READY or BLOCKED with complete case-level evidence. Never a deployment.
    unresolved, or if access/safety/approval is missing. Report what must change.
 7. Recheck `check.py sources` and apply [gate4](../gate-4-verify/gate.md) before READY.
    Record candidate identity and source commit,
-   catalog fingerprint, matrix, total expected/executed/passed, all other outcomes,
+   catalog fingerprint, execution/project matrix, total expected/executed/passed,
+   all other outcomes,
    full-run command/timing, and evidence locations.
 
-Present a concise CUJ/case result table, with failed expectations and next action
+Present a concise CUJ/case result table, identifying failed executions/projects,
+with failed expectations and next action
 when blocked. Show unassessed generated-content qualities separately, without
 treating them as skipped tests or pretending that they passed.
 The user does not need to inspect generated Playwright code.

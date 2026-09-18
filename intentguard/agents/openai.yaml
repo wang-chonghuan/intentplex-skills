@@ -1,4 +1,4 @@
 interface:
   display_name: "intentguard"
-  short_description: "Designer-owned behavior cases and full E2E release checks"
-  default_prompt: "Use $intentguard to maintain approved user-facing behavior cases in .intentgurad/e2e.json and verify their E2E implementation."
+  short_description: "One behavior catalog for UI and client-callable API checks"
+  default_prompt: "Use $intentguard to maintain approved UI and client-callable API/MCP behavior in .intentgurad/e2e.json and verify every approved execution."

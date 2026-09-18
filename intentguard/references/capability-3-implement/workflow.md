@@ -12,18 +12,22 @@ Output: a faithful executable implementation and repeatability evidence.
    Reuse the project's fixtures/configuration; obtain required approval before
    new dependencies or external operations.
 3. Read each selected case's approved Then before exploring controls/actual values.
-   Identify its user surface, repeatable Given setup, When, and every assertion.
+   Identify each execution's surface/projects, repeatable Given, When, and every
+   shared assertion; do not assume every case runs in every browser.
    Default to the fixed test account, with explicit anonymous contexts for public
-   features; public API/MCP service cases use their real consumer entry point.
+   features; API/MCP executions use their real client entry point.
    Missing access, unsafe setup, or unresolved expectations are blockers, not skips.
 4. Write `.intentgurad/tests/<case-id>/case.spec.*` with the static annotation/
-   digest/Then-step protocol. Keep needed fixtures/assets with that case and shared
+   digest/execution/Then-step protocol and approved static project routing. Keep
+   needed fixtures/assets with that case and shared
    helpers in `support/`. Implement bounded setup/cleanup without deleting the
    shared account. Do not add subjective quality checks outside the catalog.
-5. Run each new/changed case independently twice with freshly established premises;
+5. Run each new/changed execution in its assigned projects independently twice
+   with freshly established premises;
    the account and stable seed data may stay the same. Then run it with affected
    peers, normally serially on the shared account. For a one-case suite, the two
-   standalone runs suffice. Do not require fresh users, tenants, or namespaces.
+   standalone runs suffice. Unchanged executions need no new repeatability proof.
+   Do not require fresh users, tenants, or namespaces.
    Prove cleanup/failure recovery with a safe controlled interruption/failure when
    a new fixture can leave resources behind; do not cause paid/destructive effects
    to test teardown. Explain any recovery path that cannot be safely exercised.
@@ -40,7 +44,7 @@ Output: a faithful executable implementation and repeatability evidence.
    commit `.intentgurad/` through the authorized repository workflow. Run
    `check.py sources`; unresolved commit authority/pending changes prevent release,
    not honest reporting of development evidence.
-9. Report implemented/blocked IDs, repeatability/cleanup evidence, unassessed
+9. Report implemented/blocked case/execution IDs, repeatability/cleanup evidence, unassessed
    limitations, source status, and gate outcome. Full release verification remains
    cap4 and is not implied by focused tests passing.
 

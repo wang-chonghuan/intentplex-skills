@@ -65,6 +65,7 @@ def collection(obj, key, where, optional=False):
 
 ID = re.compile(r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+")
 ASSERTION = re.compile(r"A[1-9][0-9]*")
+EXECUTION = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
 THEN_STEP = re.compile(r"Then (A[1-9][0-9]*)")
 SPEC = re.compile(r"case\.spec\.(?:[cm]?[jt]s|[jt]sx)")
 ROOT = ".intentgurad"
@@ -75,10 +76,28 @@ def digest(value):
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def read_case(case, index):
+def read_execution(execution, where, projects):
+    require(isinstance(execution, dict) and
+            set(execution) == {"id", "surface", "when", "projects"},
+            f"{where}: execution needs id, surface, when, and projects")
+    require(text(execution["id"]) and EXECUTION.fullmatch(execution["id"]),
+            f"{where}: invalid execution id")
+    require(execution["surface"] in ("web", "api", "mcp"),
+            f"{where}: surface must be web, api, or mcp")
+    actions = collection(execution, "when", where)
+    require(actions and all(text(action) for action in actions),
+            f"{where}: when needs nonempty statements")
+    selected = collection(execution, "projects", where)
+    require(selected and all(text(project) for project in selected) and
+            len(selected) == len(set(selected)) and set(selected) <= set(projects),
+            f"{where}: projects must be nonempty, unique approved project names")
+    return execution
+
+
+def read_case(case, index, version, projects):
     where = f"e2e.json cases[{index}]"
-    keys = {"id", "title", "cuj", "surface", "status", "source", "approval",
-            "given", "when", "then", "data"}
+    keys = {"id", "title", "cuj", "status", "source", "approval", "given", "then", "data"}
+    keys |= {"surface", "when"} if version == 1 else {"executions"}
     require(isinstance(case, dict) and
             keys <= set(case) <= keys | {"limitations"},
             f"{where}: missing or unsupported case fields")
@@ -87,18 +106,32 @@ def read_case(case, index):
                 f"{where}: invalid {key}")
     require(case["status"] in ("draft", "active", "retired"),
             f"{where}: invalid status")
-    require(case["surface"] in ("web", "public-api", "public-mcp"),
-            f"{where}: surface must be web, public-api, or public-mcp")
     for key in ("title", "source"):
         require(text(case[key]), f"{where}: {key} is required")
     require(case["approval"] is None or text(case["approval"]),
             f"{where}: approval must be null or a nonempty reference")
     require(case["status"] == "draft" or text(case["approval"]),
             f"{where}: {case['status']} case needs actual approval")
-    for key in ("given", "when"):
+    for key in (("given", "when") if version == 1 else ("given",)):
         values = collection(case, key, where)
         require(values and all(text(value) for value in values),
                 f"{where}: {key} needs nonempty statements")
+    if version == 1:
+        surfaces = {"web": "web", "public-api": "api", "public-mcp": "mcp"}
+        require(text(case["surface"]) and case["surface"] in surfaces,
+                f"{where}: surface must be web, public-api, or public-mcp")
+        executions = [{
+            "id": "default", "surface": surfaces[case["surface"]],
+            "when": case["when"], "projects": projects,
+        }]
+    else:
+        executions = [
+            read_execution(execution, f"{where}.executions[{i}]", projects)
+            for i, execution in enumerate(collection(case, "executions", where))
+        ]
+        ids = [execution["id"] for execution in executions]
+        require(ids and len(ids) == len(set(ids)),
+                f"{where}: missing or duplicate execution IDs")
     assertions = []
     for item in collection(case, "then", where):
         require(isinstance(item, dict) and set(item) == {"id", "expect"},
@@ -117,8 +150,9 @@ def read_case(case, index):
             f"{where}: limitations must be nonempty descriptions")
     return {
         **{key: case[key] for key in (
-            "id", "title", "cuj", "surface", "status", "source", "approval"
+            "id", "title", "cuj", "status", "source", "approval"
         )},
+        "executions": executions,
         "assertions": assertions,
         "limitations": limitations,
         "digest": digest(case),
@@ -130,7 +164,7 @@ def catalog(root):
     keys = {"version", "playwright_config", "projects", "approval", "cases"}
     require(isinstance(suite, dict) and set(suite) == keys,
             "e2e.json: unexpected or missing fields")
-    require(type(suite["version"]) is int and suite["version"] == 1,
+    require(type(suite["version"]) is int and suite["version"] in (1, 2),
             "e2e.json: unsupported version")
     config = suite["playwright_config"]
     require(text(config) and not Path(config).is_absolute() and
@@ -144,7 +178,10 @@ def catalog(root):
             "e2e.json: approval must be null or a nonempty reference")
     definitions = collection(suite, "cases", "e2e.json")
     require(definitions, "Empty catalog: e2e.json has no cases")
-    cases = [read_case(case, index) for index, case in enumerate(definitions)]
+    cases = [
+        read_case(case, index, suite["version"], projects)
+        for index, case in enumerate(definitions)
+    ]
     ids = [case["id"] for case in cases]
     require(len(ids) == len(set(ids)), "Duplicate case IDs across the catalog")
     counts = Counter(case["status"] for case in cases)
@@ -157,6 +194,7 @@ def catalog(root):
         blockers.append(f"{counts['draft']} candidate cases are still drafts")
     return suite, cases, {
         "ok": True,
+        "version": suite["version"],
         "ready": not blockers,
         "blockers": blockers,
         "catalog_digest": digest(suite),
@@ -315,7 +353,12 @@ def check_report(root, suite, cases, summary, args):
     actual_outcomes = Counter()
     by_id = {case["id"]: case for case in cases}
     active = [case for case in cases if case["status"] == "active"]
-    expected = {(case["id"], project) for case in active for project in suite["projects"]}
+    expected = {
+        (case["id"], execution["id"], project): execution
+        for case in active
+        for execution in case["executions"]
+        for project in execution["projects"]
+    }
     seen = Counter()
     rows = []
     for index, (spec, test) in enumerate(tests):
@@ -325,16 +368,21 @@ def check_report(root, suite, cases, summary, args):
         try:
             case_id = annotation(test, "intentguard.case")
             case_digest = annotation(test, "intentguard.digest")
+            execution_id = (
+                annotation(test, "intentguard.execution")
+                if suite["version"] == 2 else "default"
+            )
         except Invalid as exc:
             errors.append(f"Test #{index + 1}: {exc}")
             continue
         project = test.get("projectName")
         require(text(project), f"{case_id}: test projectName is missing")
-        pair = (case_id, project)
+        pair = (case_id, execution_id, project)
         seen[pair] += 1
         case = by_id.get(case_id)
+        label = f"{case_id}/{execution_id}/{project}"
         if pair not in expected:
-            issues.append("Case/project is outside the active approved catalog")
+            issues.append("Case/execution/project is outside the active approved catalog")
         file = spec.get("file")
         if (not text(file) or
                 (Path(report_root) / file).resolve() != specs.get(case_id)):
@@ -369,28 +417,36 @@ def check_report(root, suite, cases, summary, args):
             if case and assertion_steps != Counter(case["assertions"]):
                 issues.append("Then steps are missing, duplicated, or outside the case")
         rows.append({
-            "id": case_id, "project": project,
+            "id": case_id, "execution": execution_id, "project": project,
+            "surface": expected[pair]["surface"] if pair in expected else None,
             "outcome": test["status"], "passed": not issues, "issues": issues,
             "limitations": case["limitations"] if case else [],
         })
-        errors.extend(f"{case_id}/{project}: {issue}" for issue in issues)
-    for pair in sorted(expected - set(seen)):
-        case_id, project = pair
-        errors.append(f"{case_id}/{project}: missing execution")
-        rows.append({"id": case_id, "project": project,
+        errors.extend(f"{label}: {issue}" for issue in issues)
+    for pair in sorted(set(expected) - set(seen)):
+        case_id, execution_id, project = pair
+        errors.append(f"{case_id}/{execution_id}/{project}: missing execution")
+        rows.append({"id": case_id, "execution": execution_id, "project": project,
+                     "surface": expected[pair]["surface"],
                      "outcome": "missing", "passed": False, "issues": ["Not executed"]})
-    for (case_id, project), count in sorted(seen.items()):
+    for (case_id, execution_id, project), count in sorted(seen.items()):
         if count != 1:
-            errors.append(f"{case_id}/{project}: {count} executions instead of one")
+            errors.append(
+                f"{case_id}/{execution_id}/{project}: {count} executions instead of one"
+            )
             for row in rows:
-                if row["id"] == case_id and row["project"] == project:
+                if (row["id"], row["execution"], row["project"]) == (
+                    case_id, execution_id, project
+                ):
                     row["passed"] = False
                     row["issues"].append("Duplicate execution")
     for key in outcomes:
         if stats[key] != actual_outcomes[key]:
             errors.append(f"Report.stats.{key} does not match actual test records")
     if len(tests) != len(expected):
-        errors.append(f"Expected {len(expected)} case/project tests, received {len(tests)}")
+        errors.append(
+            f"Expected {len(expected)} case/execution/project tests, received {len(tests)}"
+        )
     return {
         "ok": not errors,
         "complete": not errors,

@@ -7,12 +7,14 @@ Output: the smallest authorized catalog change and a behavior-level change summa
    backend tool if applicable. Separate explicit accepted requirements from AI
    suggestions or reported symptoms.
 2. Read affected CUJs and search the rest of the catalog for shared behavior:
-   permissions, navigation, persistence, roles, and dependent outcomes. A filename
+   permissions, navigation, persistence, roles, and dependent outcomes. Include
+   client-callable inputs and UI/API enforcement of the affected rule. A filename
    or changed component alone is not the impact boundary.
 3. Classify the impact as added, changed, retired, or unaffected. Add CUJs/cases for
    new behavior. Preserve IDs when the same behavior changes. Retire obsolete
    behavior with its authorization rather than erasing its history or leaving
-   contradictory active cases. Do not expand the requirement into unrelated cases.
+   contradictory active cases. Update affected execution/project assignments
+   without duplicating shared expectations or expanding into unrelated cases.
 4. Present any ambiguous conflict with both expectations and their sources. Ask
    which intent prevails when the approved requirement does not settle it.
    Do not weaken a previous case because the implementation is currently failing.
@@ -22,7 +24,8 @@ Output: the smallest authorized catalog change and a behavior-level change summa
    requirement and its implications, do not ask again merely to edit JSON.
    Otherwise keep existing active cases unchanged and present the proposed diff.
 6. Report the affected CUJs and IDs, old versus new observable expectations,
-   retirement/replacement relationships, and tests that now need reconciliation.
+   retirement/replacement relationships, changed entry points/projects, and tests
+   that now need reconciliation.
 
 Do not change Playwright or product code unless that work was also requested.
 Changes belong in `.intentgurad/e2e.json` and the normal source commit, never a

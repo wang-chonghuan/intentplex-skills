@@ -1,14 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "playwright_config": "playwright.config.ts",
-  "projects": ["chromium"],
+  "projects": ["chromium", "api"],
   "approval": null,
   "cases": [
     {
       "id": "E2E-001",
       "title": "A saved item survives a new session",
       "cuj": "CUJ-BOOKMARKS",
-      "surface": "web",
       "status": "draft",
       "source": "Designer-proposed bookmark persistence behavior",
       "approval": null,
@@ -16,9 +15,16 @@
         "The approved fixed test user is signed in.",
         "Item A is available and is not in this user's saved-items list."
       ],
-      "when": [
-        "The user saves item A.",
-        "The user signs out, signs back in, and opens the saved-items list."
+      "executions": [
+        {
+          "id": "ui",
+          "surface": "web",
+          "when": [
+            "The user saves item A.",
+            "The user signs out, signs back in, and opens the saved-items list."
+          ],
+          "projects": ["chromium"]
+        }
       ],
       "then": [
         {"id": "A1", "expect": "The list contains item A exactly once."}
@@ -26,6 +32,32 @@
       "data": {
         "setup": "Coordinate exclusive use of the shared test account and prepare item A as unsaved. Other saved items may remain.",
         "cleanup": "Remove this test's saved item A if present, including after partial failure. Leave other account data and the account itself intact."
+      },
+      "limitations": []
+    },
+    {
+      "id": "E2E-002",
+      "title": "A zero quantity is refused without changing the cart",
+      "cuj": "CUJ-CART",
+      "status": "draft",
+      "source": "Hypothetical cart rule; replace with the product's actual approved contract",
+      "approval": null,
+      "given": ["The approved buyer is authenticated and has a prepared cart."],
+      "executions": [
+        {
+          "id": "http",
+          "surface": "api",
+          "when": ["Send POST /cart/items for an available item with quantity 0."],
+          "projects": ["api"]
+        }
+      ],
+      "then": [
+        {"id": "A1", "expect": "The API returns HTTP 400 with error code INVALID_QUANTITY."},
+        {"id": "A2", "expect": "The cart contents and total remain unchanged."}
+      ],
+      "data": {
+        "setup": "Reserve the shared buyer and prepare known cart contents through authorized setup.",
+        "cleanup": "Restore only test-owned cart changes, including if the invalid request incorrectly succeeded."
       },
       "limitations": []
     }

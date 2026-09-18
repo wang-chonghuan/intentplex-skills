@@ -9,10 +9,12 @@ Blocking invariants:
   edits or target changes after the evidence was collected.
 - `.intentgurad/` is committed, clean, and unignored; `check.py sources` passed
   before and after the run. Runtime evidence and auth state are outside the repo.
-- Catalog and matrix match approved intent; drafts, unexplored baseline gaps, or
+- Catalog and execution/project assignments match approved intent; drafts,
+  unexplored baseline gaps, or
   unjustified deletions/retirements were not used to exclude required behavior.
 - `check.py report` passed on an unedited fresh native report with the actual
-  runner exit, and gate3 covers the current translation. No missing, skipped,
+  runner exit, and gate3 covers the current translation. Every approved
+  case/execution/project combination appears exactly once. No missing, skipped,
   flaky, blocked, expected-failing, or cleanup-failing case is called a pass.
 - The summary accurately limits its claim to this candidate, environment, and
   approved scope, including unassessed generated-content quality, and does not

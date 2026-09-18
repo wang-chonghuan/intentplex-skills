@@ -5,7 +5,7 @@
 Inspect repository rules, locked Playwright version, fixtures, package manager, and
 authorized test environment. Confirm library syntax with Context7/current official
 docs. Reuse existing dependencies and helpers. Do not add Cucumber, a BDD compiler,
-a custom runner, or unit/internal API tests. Dependency additions follow the
+a custom runner, or a private-function coverage layer. Dependency additions follow the
 project's authority, not this skill's assumptions.
 
 Keep the managed config in `.intentgurad/`; adapt the
@@ -16,10 +16,15 @@ case's folder. Expected behavior remains in `e2e.json`.
 
 Verify the responding application is the intended candidate. Record revision/build
 identity and relevant uncommitted changes; a stale server is not release evidence.
-Do not guess credentials. A user's public API can use Playwright's request client;
-a public MCP service can use its existing supported client/SDK inside a Playwright
-test. Call the real service as a user, not a private handler function. API/DB access
-may establish Given, but must not perform When or replace its observable assertions.
+Do not guess credentials. Client-callable APIs, including the app's own backend,
+can use Playwright's request client; MCP can use the existing supported client/SDK
+inside a Playwright test. Send the real HTTP/protocol request with the declared
+actor's credentials (or none), including approved inputs the UI never sends.
+That **is** When for an API/MCP execution. For a web execution, When uses the UI;
+an HTTP shortcut cannot stand in for the clicks. API/DB setup may establish Given,
+but direct DB writes or private-handler calls never substitute for When.
+Check business consequences through user/client-visible results; direct DB
+inspection may supplement evidence, not replace promised observable behavior.
 
 ## Shared Test Account
 
@@ -55,13 +60,15 @@ to silently mock the journey.
 
 ## Specification To Result
 
-One active case becomes one `test(...)` in its own directory. Use two static
-annotations from the reviewed catalog and an awaited step for every Then:
+Keep one spec file per case, with one `test(...)` per execution. Version 2 uses
+three static annotations and an awaited step for every shared Then:
 
 ```typescript
-test('A saved item survives a new session', {
+test('A saved item survives a new session [ui]', {
+  tag: ['@intentguard:chromium'],
   annotation: [
     { type: 'intentguard.case', description: 'E2E-001' },
+    { type: 'intentguard.execution', description: 'ui' },
     { type: 'intentguard.digest', description: '<SHA-256 from catalog command>' },
   ],
 }, async ({ page }) => {
@@ -76,6 +83,14 @@ This is protocol guidance, not a runnable test. Never read the digest at test
 runtime: that would certify stale code against a new definition. Update its
 static value only after reconciling the translation with the catalog change.
 
+Route each execution to exactly its catalog projects using reviewed static tags
+and project-level `grep` (see the config example), or the repository's equivalent
+native routing. These are routing details derived from the catalog, not another
+editable scope list. Do not use runtime skips to route tests. The checker requires
+exactly the approved `(case, execution, project)` set, so missing, duplicate and
+unapproved combinations fail. Legacy v1 retains one test per case and its two
+original annotations, with no selective project routing.
+
 Each Then step contains the real nonvacuous assertion, preserving quantities,
 negations, permissions, persistence, and ordering. No empty steps, optional checks,
 caught assertion failures, early returns, step skips, or fabricated success.
@@ -83,6 +98,9 @@ Use resilient user-facing locators and awaited assertions, not fixed sleeps.
 The report can prove a step ran, not that it meant the right thing; gate3 checks
 semantic fidelity. Test assertions use catalog expectations, never actual values
 read from the running product as their own oracle.
+For refused actions, assert any promised unchanged resources or absence of side
+effects as well as the error response; do not "repair" the resource before checking.
+Each execution independently establishes Given and cleans up its own changes.
 
 ## Full-Run Evidence
 
@@ -115,12 +133,14 @@ environment variables before running; never commit them. Ensure custom reporters
 auth fixtures, and config also route output to the external run directory. Resolve
 the real temp path and verify it is outside the repository before execution.
 
-No filters, shards, retries, focused tests, or repeat-each for release runs. Each
-active case must execute once in every required project. Do not merge focused
+No ad hoc CLI filters, shards, retries, focused tests, or repeat-each for release
+runs. Approved static project routing is required where execution scopes differ;
+it must not omit any catalog combination. Each active execution must run once
+in every assigned project. Do not merge focused
 reports into an artificial full run. Separate repeatability runs use separate
 reports. Preserve failed reports; rerun only after repair or verified resolution.
 
-`report` checks the approved complete catalog, per-case test paths, static digests,
+`report` checks the approved execution/project set, per-case test paths, static digests,
 Then steps, fresh native results, first-attempt success, and actual runner exit.
 It rejects missing/skipped/flaky/expected-failing/cleanup-failing executions. A
 passing report does not override a failing source check or a semantic gate.

@@ -36,7 +36,7 @@ Top-level fields:
 
 | Field | Meaning |
 |---|---|
-| `version` | `1` |
+| `version` | `2` for new catalogs; see legacy compatibility below |
 | `playwright_config` | Relative path inside `.intentgurad/`, normally `playwright.config.ts` |
 | `projects` | Nonempty unique names of the approved Playwright execution matrix |
 | `approval` | Actual confirmation of that scope, or `null` while proposed |
@@ -48,12 +48,11 @@ Each case:
 |---|---|
 | `id`, `cuj` | Stable uppercase/digit, hyphen-separated IDs, e.g. `E2E-001`, `CUJ-SAVED` |
 | `title` | One independently decidable business behavior |
-| `surface` | `web`, `public-api`, or `public-mcp` |
 | `status` | `draft`, `active`, or `retired` |
 | `source` | Product design, requirement, ticket, or conversation reference |
 | `approval` | Actual human confirmation reference; `null` while unconfirmed |
 | `given` | Nonempty list of actor, permissions, data, and conditions |
-| `when` | Nonempty list of actions through the declared user-facing surface |
+| `executions` | Nonempty list of approved ways to exercise this behavior |
 | `then` | Nonempty list of `{"id": "A1", "expect": "Observable expectation"}` |
 | `data` | `setup` and `cleanup` descriptions; read-only cases may say no mutable data |
 | `limitations` | Optional list of explicitly unassessed qualities, not hidden Then assertions |
@@ -63,6 +62,22 @@ authorization. Assertion IDs match `A1`, `A2`, etc., unique within each case.
 Keep the designer's language. One behavior may require several actions/assertions;
 split independent outcomes, not individual clicks.
 
+Each execution has exactly four fields:
+
+| Field | Meaning |
+|---|---|
+| `id` | Stable lowercase/hyphenated name, unique within this case, e.g. `ui`, `http` |
+| `surface` | `web`, `api`, or `mcp` |
+| `when` | Nonempty list of real user/client actions at this entry point |
+| `projects` | Nonempty unique subset of the top-level approved project names |
+
+Given, Then, data and approval belong to the case once. Every Then applies to
+every execution; only actions and project routing vary. Prefer one execution
+unless the rule genuinely needs another entry point. Do not force API-only inputs
+through UI manipulation. If expectations are genuinely different (such as a
+particular UI message versus an API error code), use distinct behaviors linked to
+the same CUJ/source, not copies of a shared rule or per-execution overrides.
+
 Given can name the same fixed test account in many cases. Include anonymous cases
 where the product works without login. Add other actors only when a meaningful
 permission/role behavior needs them; do not demand a user factory for every test.
@@ -71,15 +86,35 @@ Then contains the expected values, counts, relationships, visible states, errors
 or persistent effects. These come from the approved product definition, before
 test generation. Inspecting DOM or responses can discover controls and actual
 results, not justify "it currently says X, so X is correct." Do not put selectors,
-private methods, database fields, or internal API contracts in Then.
+private methods or database fields in Then. A client-visible status, error code,
+resource representation or persistent effect is a legitimate API expectation.
 
 ## Harm And Generated Content
 
-Consider relevant user-triggerable harm: unauthorized access, money, deletion,
-expired sessions, duplicate/concurrent submission, and failed operations. Do not
-invent absent product features or turn this into private-code coverage. A public
-API/MCP consumer is a user; an internal endpoint used by a web page is not a
-separate E2E service just because it is reachable over HTTP.
+Include a boundary scenario when a client can submit the input and an approved
+requirement/contract defines the outcome, or a concrete harm needs a product
+decision. Undocumented, first-party and "internal"-named HTTP endpoints count if
+users, anonymous callers, old apps or scripts can reach them. Frontend validation
+is not a server trust boundary.
+
+Consider relevant invalid values, unauthorized access, ownership of resource IDs,
+money, inventory, deletion, expired credentials, duplicate/concurrent submission
+and failed operations. Zero, null or a limit value is useful when it tests an
+actual rule; do not enumerate every field combination or chase coverage numbers.
+Unknown expected behavior goes to the designer, not an invented assertion.
+
+For example, **if approved**: Given a signed-in buyer with a prepared cart, When
+the buyer sends `POST /cart/items` with `quantity: 0`, Then the request receives
+the contract's rejection **and the cart remains unchanged**. Checking 4xx alone
+does not prove the promised lack of side effects. Do not add a UI version if its
+controls cannot submit zero. When both entries matter, they must enforce the same
+business constraint, not necessarily identical feedback.
+
+A genuinely service-only boundary need not get a case for every private method.
+Verify its relevant business consequences through the real outer entry point.
+Network isolation is not permission to ignore money, ownership or authorization
+rules; if isolation itself is promised, verify denial from the relevant caller
+context. Do not invent product features or add a separate security-testing program.
 
 For generated output, prefer modest checks the product really promises. A daily
 insight case might say: Given today's insight exists for the test account, When
@@ -111,11 +146,26 @@ Drafts belong to the candidate and block release readiness. Unrelated future ide
 belong in the backlog, not this catalog. Known unassessed generated-content quality
 is a limitation, not an invented draft case.
 
-Each active case runs once in every approved project. For a service-only product,
-use a request/client-only project; a browser is not required. A mixed product may
-use the same project for web and service cases. Reuse the established browser/
-viewport matrix when appropriate, and agree on changes. Do not filter some cases
-out of a project or shrink the matrix to make red tests disappear.
+Each active execution runs once in each of its approved projects. API/MCP cases
+can use one request/client-only project without launching a browser; do not repeat
+them across browsers without a reason. Web executions use the approved browser/
+viewport matrix. A mixed project is allowed when appropriate. Review routing
+changes like scope changes; never shrink the matrix to hide red tests.
+
+## Legacy Compatibility
+
+The checker also reads version 1 unchanged: case-level `surface` (`web`,
+`public-api`, `public-mcp`) and `when`, with each active case in **all** top-level
+projects. Its original case digest and two-annotation protocol remain valid;
+the summary calls that execution `default`. Reading does not rewrite approval,
+definitions or historical evidence. Do not mix version 1 and 2 case shapes.
+
+Migrate only with the owner's agreement: preserve IDs, sources, approvals,
+Given/Then/data and retired history; move each old When into one execution,
+map `public-api` to `api` and `public-mcp` to `mcp`, and initially copy **all** old
+projects into it. Reducing that matrix or adding entries requires approval.
+Retranslate static digests/annotations and routing, then obtain fresh evidence.
+Old reports do not certify the migrated catalog.
 
 ## Checks
 
@@ -126,8 +176,9 @@ python3 <skill-root>/scripts/check.py catalog --root .intentgurad
 python3 <skill-root>/scripts/check.py sources --root .intentgurad
 ```
 
-`catalog` validates definitions and emits IDs, statuses, assertion IDs, limitations,
-and SHA-256 digests of canonical JSON objects. Key order/whitespace do not change a
+`catalog` validates definitions and emits IDs, executions/projects, statuses,
+assertion IDs, limitations, and SHA-256 digests of canonical JSON objects.
+Key order/whitespace do not change a
 digest; a field value does. `ready` means approved nonempty scope with no drafts,
 not implemented tests, a committed harness, or product correctness.
 
