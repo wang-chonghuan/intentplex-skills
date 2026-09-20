@@ -1,3 +1,6 @@
 
 # skill design scratch (kept local, not shipped)
 ips-personas/.tmp/
+
+# python bytecode
+__pycache__/

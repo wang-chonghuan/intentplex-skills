@@ -1,0 +1,3 @@
+display_name: ips-uxcopy
+short_description: Audit or write user-visible copy so it states conclusions with evidence, and never ships machine-written filler, leaked internal vocabulary, or reported absence.
+default_prompt: Use ips-uxcopy to audit this copy for machine-written filler, internal vocabulary, reported absence and metrics without conclusions, and give replacements or deletions.
