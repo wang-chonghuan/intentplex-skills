@@ -1,0 +1,3 @@
+display_name: ips-content-design
+short_description: Plan or review content from the reader's need before writing it, with a job story, one question per page, a priority guide, a chosen form for each element, and a content model for generated pages, so AI-generated content does not turn into slop.
+default_prompt: Use ips-content-design to plan this content. Write the job story and the one question the page answers, rank what goes on it, choose a form for each element, and define a content model if a model will generate it.
