@@ -1,18 +1,21 @@
 ---
 name: ips-content-design
-description: Load when content is being planned or judged as a whole — a page, screen, report, email, help article, or a prompt and template that will make a model generate many pages — and the work is deciding who reads it, what it answers, what goes on it, in what form, and what each generated field may contain. Triggers include "ips-content-design", "content design", "这个页面该放什么", "帮我设计这个页面的内容", "生成一个内容页", "AI 生成的内容太水", "防止 AI slop", "给生成内容定个内容模型", "design the content for this page". Do not load for line-by-line wording fixes on a page whose structure is settled (use ips-uxcopy) or for visual styling.
+description: Load when content is being planned, judged, written, or cleaned up — a page, screen, report, email, help article, empty state, or a prompt and template that will make a model generate many pages. Covers deciding who reads it, what it answers, what goes on it and in what form, what each generated field may contain, and checking the copy line by line for machine-written filler. Triggers include "ips-content-design", "content design", "这个页面该放什么", "帮我设计这个页面的内容", "生成一个内容页", "AI 生成的内容太水", "防止 AI slop", "给生成内容定个内容模型", "审一下文案", "这文案像机器写的", "clean up this copy", "design the content for this page". Do not load for visual styling.
 ---
 
 # ips-content-design
 
-Use this skill when content is being planned: a web page, app screen, report, email, help article, or a prompt and template that will make a model generate many pages. It decides who the reader is and what they came to do, the one question the page answers, what goes on the page and in what order, what form each piece takes, and, for generated pages, what each field may contain. The words are written last.
+Use this skill when content is being planned or written: a web page, app screen, report, email, help article, or a prompt and template that will make a model generate many pages. It decides who the reader is and what they came to do, the one question the page answers, what goes on the page and in what order, what form each piece takes, and, for generated pages, what each field may contain. The words are written last, and checked line by line.
 
-Two modes:
+## Capabilities
 
-- **Design**: plan new content, or restructure content that is being rewritten.
-- **Review**: judge an existing page, or a sample of generated pages, against the same steps.
+- **cap1 Design**: plan new content, or restructure content that is being rewritten. Workflow below.
+- **cap2 Review**: judge an existing page, or a sample of generated pages, at the level of structure: what is on the page and why. Workflow below.
+- **cap3 Copy**: write the words for a page whose structure is settled, or audit existing copy line by line. Read `references/copy.md`.
 
-Both modes produce a brief or a report. Edit the target only when the user asks.
+When a request covers both structure and wording, run cap1 or cap2 first. Rewording cannot fix a page that answers the wrong question.
+
+All three produce a brief, a report, or draft copy. Edit the target only when the user asks.
 
 ## Why AI content turns into slop
 
@@ -42,7 +45,7 @@ Look in the project for the first two before asking the user. When there is no e
 
 Facts come from the data, the source documents, or a domain expert, usually the user. Do not take facts from the model's general knowledge when the page presents them as specific to this product, place, or person.
 
-## Workflow: design
+## cap1: Design
 
 Do the steps in order. Each step can remove material. No step adds material to fill space.
 
@@ -73,10 +76,9 @@ Do the steps in order. Each step can remove material. No step adds material to f
    - Keep one idea per paragraph. GOV.UK keeps most sentences under about 25 words and writes for a reading age of 9 even for specialists, because specialists also read faster in plain language.
    - Use the words from the evidence in step 1. Translate or cut any term that exists only inside the team or the codebase.
    - Name the subject and use active verbs, so the reader can see who does what.
-   - Show each number with what it is compared against or the sample it comes from.
    - Leave out introductions that describe the page, summaries that repeat it, and FAQ sections. GOV.UK dropped FAQs because they repeat content that should have been structured around the reader's need in the first place.
 
-   For a line-by-line check of the finished copy, use the ips-uxcopy skill if it is available.
+   Then run cap3 on the draft.
 
 7. **Test the draft.**
    - Deletion test, on every element: remove it and ask what the reader in the job story loses. If they lose nothing, leave it deleted.
@@ -86,18 +88,7 @@ Do the steps in order. Each step can remove material. No step adds material to f
 
 8. **Work with whoever knows the facts.** Act as the content designer, and treat the user or a named expert as the domain expert. You are responsible for the reader's need, the structure, and the plain language. They are responsible for whether it is true. Ask them for any fact you do not have, and do not write a plausible one in its place. Before drafting at scale, show them the job story, the priority guide, and the content model if there is one, and ask for a quick critique. A mistake at that stage is repeated on every generated page.
 
-## Workflow: review
-
-1. Reconstruct the job story from the evidence. If the page cannot be tied to any reader need, report that as the main finding.
-2. Write the question the page should answer, and the question it answers now. Note when it answers none, or several.
-3. For each element, record why it is there (tied to the job story) and whether to keep it, move it, or cut it.
-4. Check the form of each kept element against the table in design step 4.
-5. For generated pages, check whether a content model exists. Read 5 to 10 real outputs, including ones with sparse data, and look at what the page shows when data is missing and whether every page repeats the same sentence shapes.
-6. Run the deletion test and the first-screen test. Leave line-level wording to ips-uxcopy.
-
-## Output
-
-Design mode returns a brief:
+cap1 returns a brief:
 
 ```markdown
 # Content Design: <page>
@@ -123,7 +114,17 @@ Evidence: <queries, tickets, notes; or "assumption, confirm with ...">
 ## How to test it
 ```
 
-Review mode returns a report:
+## cap2: Review
+
+1. Reconstruct the job story from the evidence. If the page cannot be tied to any reader need, report that as the main finding.
+2. Write the question the page should answer, and the question it answers now. Note when it answers none, or several.
+3. For each element, record why it is there (tied to the job story) and whether to keep it, move it, or cut it.
+4. Check the form of each kept element against the table in cap1 step 4.
+5. For generated pages, check whether a content model exists. Read 5 to 10 real outputs, including ones with sparse data, and look at what the page shows when data is missing and whether every page repeats the same sentence shapes.
+6. Run the deletion test and the first-screen test.
+7. If the wording is also in scope, run a cap3 audit after the structural findings, on the elements that survive.
+
+cap2 returns a report:
 
 ```markdown
 # Content Design Review
@@ -160,4 +161,4 @@ Severity:
 - Do not invent facts, numbers, quotes, or reader needs to complete a section. Remove the section instead.
 - Do not keep an element only because the data for it exists.
 - Keep methodology, data-quality notes, and how the page was generated out of the body. If the reader needs them to trust a number, add one short note at the end.
-- Lists of AI-sounding words and patterns ("delve", "not just X but Y", lists of three) describe symptoms. Removing them does not help a page that answers the wrong question, and the lists go out of date as models change. Fix relevance first.
+- Lists of AI-sounding words ("delve", "tapestry") describe symptoms. Removing them does not help a page that answers the wrong question, and such lists go out of date as models change. Fix relevance first. The defect list in cap3 is different: each item there is a way a line fails the reader, found on real pages.
