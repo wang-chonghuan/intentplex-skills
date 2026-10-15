@@ -1,9 +1,9 @@
 ---
-name: intentguard
-description: Load when the user wants a designer-owned Given/When/Then E2E case catalog, wants a ticket's Critical User Journeys reflected in that catalog, asks to implement approved cases in Playwright, or requests full-suite release verification with intentguard. Covers user-facing web, public API, and MCP products; not unit tests, internal API coverage, or generic Playwright API questions.
+name: intentqa
+description: Load when the user wants a designer-owned Given/When/Then E2E case catalog, wants a ticket's Critical User Journeys reflected in that catalog, asks to implement approved cases in Playwright, or requests full-suite release verification with intentqa. Covers user-facing web, public API, and MCP products; not unit tests, internal API coverage, or generic Playwright API questions.
 ---
 
-# intentguard
+# intentqa
 
 The product designer owns expected user-visible behavior. The case catalog is the
 contract; Playwright is its executable implementation, not another specification.
@@ -34,7 +34,7 @@ continue through them, subject to their approval boundaries.
 - Test only user-triggerable paths and their observable consequences. No unit
   tests or internal API test layer. A public API/MCP service sold or exposed to
   users is a legitimate E2E surface. Existing unrelated checks remain outside
-  this skill; do not introduce them as intentguard release requirements.
+  this skill; do not introduce them as intentqa release requirements.
 - AI may discover behaviors, draft cases, and repair test code. It may change or
   retire expected behavior only on the basis of a human-approved requirement.
   A failure, the current implementation, or "make it green" is not that approval.
@@ -75,3 +75,8 @@ blocker report. Do not reopen passing work for polishing.
 Use `<skill-root>` for this directory and run project commands from `<repo-root>`.
 No project names, developer home directories, providers, ticket backends, or
 deployment platforms are built into the skill.
+
+The skill was renamed from intentguard to intentqa. Existing projects still use
+`.intentgurad/`, `intentguard.case` / `intentguard.digest` annotations and
+`INTENTGUARD_RUN_DIR`; those are retained runtime contracts, not the skill name.
+This rename does not migrate their catalogs or change their verification rules.
