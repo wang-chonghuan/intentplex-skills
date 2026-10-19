@@ -1,0 +1,6 @@
+interface:
+  display_name: "ips-design-to-antd"
+  short_description: "Restyle an Ant Design theme after a reference website, measured and declared in one table"
+  default_prompt: "Use $ips-design-to-antd to restyle our Ant Design theme after this reference site: measure its buttons, colours, tags and cards, confirm the colour roles with me, declare every custom value in one table, map it to Ant tokens, and verify."
+policy:
+  allow_implicit_invocation: true
