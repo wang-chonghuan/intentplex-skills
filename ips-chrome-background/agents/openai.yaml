@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chrome Background"
+  short_description: "Use logged-in Chrome without taking over the desktop"
+  default_prompt: "Use $ips-chrome-background to operate the webpage through the official Chrome extension in a dedicated background task tab."
