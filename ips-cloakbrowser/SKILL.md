@@ -39,9 +39,9 @@ Repair is the same command. Diagnose first with `cloakbrowser info` (runs a laun
 
 ## Use it
 
-**Browser tools (interactive).** The `cloakbrowser` MCP server exposes Playwright MCP's tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_evaluate`, `browser_take_screenshot`, and the rest. Each agent session gets its own headless browser with a fresh in-memory profile and a fresh fingerprint; it closes after 10 idle minutes and relaunches on the next call. Auto-named snapshots go to `~/.local/share/ips-cloakbrowser/output/`, not into the repo.
+**Browser tools (interactive).** The `cloakbrowser` MCP server exposes Playwright MCP's tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_evaluate`, `browser_take_screenshot`, and the rest. Each agent session gets its own headless browser with a fresh in-memory profile and a fresh fingerprint; it closes after 3 idle minutes, losing its page state, and relaunches on the next call. Call `browser_close` when done (see the seat rules below). Auto-named snapshots go to `~/.local/share/ips-cloakbrowser/output/`, not into the repo.
 
-**One-shot read (shell).** `cloak-fetch <url>` prints title, final URL, HTTP status and the visible text. `--html` prints rendered HTML, `--screenshot <file>` saves a full-page PNG, `--wait 8` gives a challenge page time to clear, `--headed` opens a real window. Codex's sandbox blocks network and Chromium, so in Codex run `cloak-fetch` with escalation outside the sandbox; MCP servers are not sandboxed.
+**One-shot read (shell).** `cloak-fetch <url>` prints title, final URL, HTTP status and the visible text. `--html` prints rendered HTML, `--screenshot <file>` saves a full-page PNG, `--wait 8` gives a challenge page time to clear, `--headed` opens a real window, `--seat-wait <sec>` sets how long it queues for a license seat (default 90). Exit code 75 means no seat came free in time. Codex's sandbox blocks network and Chromium, so in Codex run `cloak-fetch` with escalation outside the sandbox; MCP servers are not sandboxed.
 
 **Scripts.** For a crawl or a multi-step job, write Python against the wrapper rather than driving MCP step by step. Run it with the wrapper's interpreter, `"$(uv tool dir)/cloakbrowser/bin/python"`:
 
@@ -64,7 +64,20 @@ Check the job: `launchctl print gui/$(id -u)/com.intentplex.ips-cloakbrowser.upd
 
 ## Free binary, free key, Pro
 
-Without a key the wrapper uses the old free build (macOS: Chromium 145, 26 patches), and new binaries rarely arrive. `cloakbrowser login` gets a free key through a GitHub sign-in: the wrapper then downloads the latest build (Chromium 155+, 87 patches) and `cloak-update` keeps it current, but the key allows **one concurrent browser session** — a second agent browsing at the same time is refused. Only the user runs `cloakbrowser login`; it opens their GitHub sign-in and waits for a key pasted from email. `cloakbrowser logout` returns to the keyless build. A paid key raises the concurrency limit.
+Without a key the wrapper uses the old free build (macOS: Chromium 145, 26 patches), and new binaries rarely arrive. `cloakbrowser login` gets a free key through a GitHub sign-in: press Enter at its prompt, authorize in the browser, then paste the key emailed to the GitHub primary address. The key is stored in `~/.cloakbrowser/license.key`; run `cloak-update` afterwards to download the latest build (Chromium 155+, 87 patches), which the daily job then keeps current. Only the user runs `cloakbrowser login`, because it is their GitHub sign-in. `cloakbrowser logout` returns to the keyless build, and a paid key raises the concurrency limit. Never print or commit the key.
+
+### The one-seat limit
+
+The free key allows **one open browser across every agent, session and script on the machine**. Measured on Chromium 155:
+
+| Situation | What happens |
+|---|---|
+| Second browser while one is open | Denied within a second. Wrapper code raises `CloakBrowserLicenseError` ("session limit reached") |
+| Same denial in a browser tool | `Target page, context or browser has been closed`, with `exitCode=76` in the browser log. Retrying in the same session works once the seat is free |
+| `browser_close`, idle timeout, MCP server exit, SIGTERM to `cloak-fetch` | Seat is free again within about 2 seconds |
+| Browser hard-killed (SIGKILL, crash) | Seat stays taken until the server's lease expires, up to 4 minutes |
+
+So: prefer `cloak-fetch` for reads, call `browser_close` when a browser-tool task ends, always close in a `finally` block in scripts, never `kill -9` a browser, and do not run `cloakbrowser info` (it launches a browser) while another agent may be browsing. If the seat stays busy for 5 minutes, tell the user instead of switching browsers silently.
 
 ## When a site still blocks it
 

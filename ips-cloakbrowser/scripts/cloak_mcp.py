@@ -17,7 +17,7 @@ from cloakbrowser import config as cloak_config  # noqa: E402
 from cloakbrowser.download import ensure_binary  # noqa: E402
 
 STATE_DIR = Path(os.environ.get("IPS_CLOAKBROWSER_HOME", Path.home() / ".local/share/ips-cloakbrowser"))
-IDLE_TIMEOUT_MS = "600000"  # free a session's headless browser after 10 idle minutes
+IDLE_TIMEOUT_MS = "180000"  # an open browser holds a license seat; the free key has only one
 
 
 def main() -> None:
