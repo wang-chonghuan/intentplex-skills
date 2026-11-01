@@ -1,0 +1,3 @@
+display_name: ips-cloakbrowser
+short_description: Install, update and use CloakBrowser, the stealth Chromium the agents browse the web with.
+default_prompt: Use ips-cloakbrowser to check that CloakBrowser, its cloakbrowser MCP server and the daily update job are healthy, and repair anything that is not.
