@@ -13,4 +13,6 @@ The license allows one open browser across all agents and sessions, so:
 - Call `browser_close` as soon as a browser-tool task is finished. An idle browser otherwise holds the seat for 3 minutes.
 - A browser tool failing with `Target page, context or browser has been closed` and `exitCode=76` in its log, or `cloak-fetch` exiting with 75, means another session holds the seat. Wait a minute and retry for up to 5 minutes, then tell the user the seat is busy.
 
+`cloak-fetch` handles an unusable license key by itself: it starts the keyless local browser on Colima and reads through that. If a browser tool reports the key is invalid (`exitCode=77`), run `colima start cloakbrowser`; browser tools use it from the next session. Only the user requests license keys.
+
 Setup, updates and troubleshooting: the `ips-cloakbrowser` skill.

@@ -21,6 +21,16 @@ need npm "install Node.js 18 or newer"
 need python3 "install Python 3"
 mkdir -p "$BIN" "$SHARE" "$(dirname "$PLIST")" "$(dirname "$LOG")"
 
+if [ "${1:-}" = "--scripts-only" ]; then
+  [ -x "$BIN/cloak-fetch" ] || { echo "cloak-fetch is not installed; run the full installer" >&2; exit 1; }
+  cp "$SKILL_DIR/scripts/cloak_mcp.py" "$SKILL_DIR/scripts/cloak_fetch.py" "$SHARE/"
+  cp "$SKILL_DIR/scripts/cloak-update.sh" "$SHARE/cloak-update.sh"
+  chmod +x "$SHARE/cloak-update.sh"
+  echo "Synced authoritative skill scripts; no dependencies, binary, registration or launchd changes."
+  exit 0
+fi
+[ "$#" = 0 ] || { echo "usage: install.sh [--scripts-only]" >&2; exit 1; }
+
 say "wrapper (uv tool cloakbrowser)"
 uv tool install --upgrade cloakbrowser
 TOOL_PY="$(uv tool dir)/cloakbrowser/bin/python"

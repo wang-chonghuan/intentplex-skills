@@ -1,12 +1,15 @@
 """Run Playwright MCP on the CloakBrowser stealth Chromium.
 
 Resolves the installed binary at every start, so a binary update needs no
-config change. Usage: cloak-mcp [--headed] [extra playwright-mcp flags...]
+config change. While the keyless local browser runs (colima start cloakbrowser),
+it attaches to that one. Usage: cloak-mcp [--headed] [extra playwright-mcp flags...]
 """
 
 import json
 import os
+import secrets
 import shutil
+import socket
 import sys
 from pathlib import Path
 
@@ -18,13 +21,18 @@ from cloakbrowser.download import ensure_binary  # noqa: E402
 
 STATE_DIR = Path(os.environ.get("IPS_CLOAKBROWSER_HOME", Path.home() / ".local/share/ips-cloakbrowser"))
 IDLE_TIMEOUT_MS = "180000"  # an open browser holds a license seat; the free key has only one
+LOCAL_PORT = 19222
 
 
-def main() -> None:
-    argv = sys.argv[1:]
-    headed = "--headed" in argv
-    passthrough = [a for a in argv if a != "--headed"]
+def local_running() -> bool:
+    try:
+        socket.create_connection(("127.0.0.1", LOCAL_PORT), timeout=1).close()
+        return True
+    except OSError:
+        return False
 
+
+def host_browser(headed: bool) -> dict:
     # Drop the wrapper's fixed seed: with none, the binary draws a fresh
     # fingerprint per launch and the config file is identical for every session.
     stealth = [a for a in cloak_config.get_default_stealth_args() if not a.startswith("--fingerprint=")]
@@ -38,20 +46,31 @@ def main() -> None:
     }
     # Headless has no window, so a fixed desktop viewport stays coherent; headed tracks the real window.
     viewport = None if headed else getattr(cloak_config, "DEFAULT_VIEWPORT", {"width": 1920, "height": 947})
+    return {
+        "browserName": "chromium",
+        "isolated": True,
+        "launchOptions": launch,
+        "contextOptions": {"viewport": viewport},
+    }
+
+
+def main() -> None:
+    argv = sys.argv[1:]
+    headed = "--headed" in argv
+    passthrough = [a for a in argv if a != "--headed"]
+
+    local = local_running()
+    if local:  # a seed per session gives each its own Chrome, so agents do not share tabs
+        passthrough += ["--cdp-endpoint", f"http://127.0.0.1:{LOCAL_PORT}?fingerprint={secrets.token_hex(8)}"]
     config = {
-        "browser": {
-            "browserName": "chromium",
-            "isolated": True,
-            "launchOptions": launch,
-            "contextOptions": {"viewport": viewport},
-        },
+        "browser": {"browserName": "chromium"} if local else host_browser(headed),
         # Auto-named snapshots and screenshots stay out of the agent's repo.
         "outputDir": str(STATE_DIR / "output"),
         "outputMaxSize": 200 * 1024 * 1024,
     }
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    path = STATE_DIR / ("mcp-config-headed.json" if headed else "mcp-config.json")
+    path = STATE_DIR / ("mcp-config-local.json" if local else "mcp-config-headed.json" if headed else "mcp-config.json")
     tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(config, indent=2) + "\n")
     os.replace(tmp, path)

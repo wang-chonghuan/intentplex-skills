@@ -27,6 +27,10 @@ The script copies its Python and shell sources to `~/.local/share/ips-cloakbrows
 
 Never store anything in `~/.cloakbrowser` besides what the wrapper writes: `cloakbrowser clear-cache` deletes that whole directory, license key included.
 
+For a script-only repair on an already-installed machine, run
+`bash <this skill>/scripts/install.sh --scripts-only`. It synchronizes the
+authoritative scripts without upgrading dependencies, browser binaries or registrations.
+
 ## Install or repair
 
 ```bash
@@ -54,6 +58,27 @@ ctx.close()
 
 `launch_persistent_context("<dir>")` keeps cookies and one fingerprint across runs; `humanize=True` adds human-like mouse and typing; `proxy=` and `geoip=True` route through a proxy with matching timezone and locale.
 
+**Redirect experiments.** `cloak-fetch <url> --redirect-only --wait 8` uses a real
+Chromium navigation and prints JSON with `url`, `status`, and only `location`,
+`cf-mitigated`, and `retry-after` response headers. It stops an HTTP redirect
+before the destination is requested, retaining the original status and raw
+Location. Non-redirect pages can render during the bounded wait; this is not a
+header-only HTTP client. It uses the browser's own user agent, not a bot UA.
+`--headed` is optional. Cookies and license keys are never output. Do not use
+`route.fetch()` for this experiment: it is an API request, not browser navigation.
+
+For a batch, use `cloak-fetch --redirect-session --wait 8`. It launches one
+browser and emits `{"event":"ready","protocol":1}`. Send one `{"url":"..."}` JSON
+line on stdin, read its flushed response, then send the next after the desired
+gap. Each request opens and closes one page in the same context. The caller owns
+rate-limit backoff and handling blocks; the command never prefetches the next
+URL. End stdin to close the browser; `{"event":"closed"}` confirms cleanup.
+An `error` with `scope: item` reports a safe navigation error code and keeps the
+context alive; the caller decides whether the link is invalid or retryable.
+An error without item scope is a broken session. Close it before a paced recovery
+with the same browser; never silently switch browsers. Recovery is the authorized
+batch caller's responsibility, not a retry loop inside this command.
+
 ## Updates
 
 `cloak-update` runs daily from launchd and at login. It upgrades the wrapper (`uv tool upgrade cloakbrowser`), fetches a newer binary if one exists (`cloakbrowser update`), updates `@playwright/mcp`, and deletes cached binaries that are no longer the active one and that no running browser uses. Results go to `~/Library/Logs/ips-cloakbrowser-update.log`; the job's exit code is non-zero if any step failed.
@@ -64,7 +89,7 @@ Check the job: `launchctl print gui/$(id -u)/com.intentplex.ips-cloakbrowser.upd
 
 ## Free binary, free key, Pro
 
-Without a key the wrapper uses the old free build (macOS: Chromium 145, 26 patches), and new binaries rarely arrive. `cloakbrowser login` gets a free key through a GitHub sign-in: press Enter at its prompt, authorize in the browser, then paste the key emailed to the GitHub primary address. The key is stored in `~/.cloakbrowser/license.key`; run `cloak-update` afterwards to download the latest build (Chromium 155+, 87 patches), which the daily job then keeps current. Only the user runs `cloakbrowser login`, because it is their GitHub sign-in. `cloakbrowser logout` returns to the keyless build, and a paid key raises the concurrency limit. Never print or commit the key.
+Since wrapper 0.7.0 every launch on the host needs a key. `cloakbrowser login` gets a free key by email or saves one you already have. The key is stored in `~/.cloakbrowser/license.key`; run `cloak-update` afterwards to download the latest build, which the daily job then keeps current. Only the user runs `cloakbrowser login`, because it is their email. A paid key raises the concurrency limit. Never print or commit the key, and never request a second free key: the vendor revokes every linked one.
 
 ### The one-seat limit
 
@@ -78,6 +103,22 @@ The free key allows **one open browser across every agent, session and script on
 | Browser hard-killed (SIGKILL, crash) | Seat stays taken until the server's lease expires, up to 4 minutes |
 
 So: prefer `cloak-fetch` for reads, call `browser_close` when a browser-tool task ends, always close in a `finally` block in scripts, never `kill -9` a browser, and do not run `cloakbrowser info` (it launches a browser) while another agent may be browsing. If the seat stays busy for 5 minutes, tell the user instead of switching browsers silently.
+
+## When the key is unavailable
+
+`cloak-fetch` asks the license server at every start. If the key is not usable, it starts the keyless browser on Colima by itself and reads through that (`--headed` has no effect there), and it goes back once the key works. Browser tools use that browser from the next session whenever it is running. To start it for them:
+
+```bash
+colima start cloakbrowser
+```
+
+`colima stop cloakbrowser` frees it, and browser tools go back to the key.
+
+First time on a machine:
+
+```bash
+colima start cloakbrowser --cpu 2 --memory 3 && docker run -d --init --name ips-cloakbrowser-local --restart unless-stopped -p 127.0.0.1:19222:9222 -e CLOAKBROWSER_AUTO_UPDATE=false cloakhq/cloakbrowser:0.6.5 cloakserve --idle-timeout=60
+```
 
 ## When a site still blocks it
 
