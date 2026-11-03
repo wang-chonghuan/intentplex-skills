@@ -1,0 +1,4 @@
+interface:
+  display_name: "intentguard"
+  short_description: "One behavior catalog for UI and client-callable API checks"
+  default_prompt: "Use $intentguard to maintain approved UI and client-callable API/MCP behavior in .intentgurad/e2e.json and verify every approved execution."
